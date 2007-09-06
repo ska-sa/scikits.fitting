@@ -1,16 +1,18 @@
 ## @file interpolator.py
 #
-# Class for encapsulating interpolator functions.
+# Classes for encapsulating interpolator functions.
 #
 # copyright (c) 2007 SKA/KAT. All rights reserved.
 # @author Ludwig Schwardt <ludwig@ska.ac.za>
 # @date 2007-08-28
 
+# pylint: disable-msg=C0103,R0903
+
 import numpy as np
 import copy
 
 #----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Interpolator
+#--- INTERFACE :  Interpolator
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Interface object for interpolator functions.
@@ -30,6 +32,7 @@ class Interpolator(object):
     # @param self The current object
     # @param x    Known input values as a numpy array
     # @param y    Known output values as a numpy array
+    # 
     def fit(self, x, y):
         raise NotImplementedError
     
@@ -44,17 +47,28 @@ class Interpolator(object):
 #--- CLASS :  PolynomialFit
 #----------------------------------------------------------------------------------------------------------------------
 
-## Fits polynomial to data.
+## Fits polynomial to 1-D data.
 # This uses numpy's polyfit and polyval.
 class PolynomialFit(Interpolator):
-    ## Initialiser
+    ## Initialiser.
     # @param self   The current object
     # @param degree Polynomial degree (required)
     # @param rcond  Relative condition number of fit 
     #               (smallest singular value that will be used to fit polynomial, has sensible default)
     def __init__(self, degree, rcond=None):
+        Interpolator.__init__(self)
+        ## @var _degree
+        # Polynomial degree
         self._degree = degree
+        ## @var _rcond
+        # Relative condition number of fit
         self._rcond = rcond
+        ## @var _mean
+        # Mean of input data, only set after fit()
+        self._mean = None
+        ## @var _poly
+        # Polynomial coefficients, only set after fit()
+        self._poly = None
     
     ## Fit polynomial to data.
     # @param self The current object
@@ -69,12 +83,11 @@ class PolynomialFit(Interpolator):
     ## Evaluate polynomial on new data.
     # @param self The current object
     # @param x    Input to function as a 1-D numpy array, or sequence
-    # @return     Output of function as a numpy array
+    # @return     Output of function as a 1-D numpy array
     def __call__(self, x):
-        try: 
-            return np.polyval(self._poly, x - self._mean)
-        except AttributeError:
+        if (self._poly == None) or (self._mean == None):
             raise AttributeError, "Polynomial not fitted to data yet - first call 'fit'."
+        return np.polyval(self._poly, x - self._mean)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  ReciprocalFit
@@ -88,6 +101,9 @@ class ReciprocalFit(Interpolator):
     # @param self The current object
     # @param interp Interpolator object to use on the reciprocal of the data
     def __init__(self, interp):
+        Interpolator.__init__(self)
+        ## @var _interp
+        # Internal interpolator object
         self._interp = copy.deepcopy(interp)
     
     # Fit stored interpolator to reciprocal of data, i.e. fit function '1/y = f(x)'.
@@ -117,9 +133,17 @@ class Independent1DFit(Interpolator):
     # @param interp Interpolator object to use on each 1-D segment
     # @param axis Axis of 'y' matrix which will vary with the independent 'x' variable
     def __init__(self, interp, axis):
+        Interpolator.__init__(self)
+        ## @var _interp
+        # Internal interpolator object to be cloned into an array of interpolators
         self._interp = interp
+        ## @var _axis
+        # Axis of 'y' matrix which will vary with the independent 'x' variable
         self._axis = axis
-    
+        ## @var _interps
+        # Array of interpolators, only set after fit()
+        self._interps = None
+        
     ## Fit a set of stored interpolators to one axis of 'y' matrix.
     # @param self The current object
     # @param x    Known input values as a 1-D numpy array or sequence
@@ -153,22 +177,21 @@ class Independent1DFit(Interpolator):
     # @param x    Input to function as a 1-D numpy array, or sequence
     # @return     Output of function as an N-D numpy array
     def __call__(self, x):
-        try:
-            # Create blank output array with specified axis appended at the end of shape
-            outShape = list(self._interps.shape)
-            outShape.append(len(x))
-            y = np.ndarray(outShape)
-            numInterps = np.array(self._interps.shape).prod()
-            # Rearrange to form 2-D array of data and 1-D array of interpolators
-            flatY = y.reshape(numInterps, len(x))
-            assert flatY.base is y, "Reshaping array resulted in a copy instead of a view - rewrite this code..."
-            flatInterps = self._interps.ravel()
-            # Apply each interpolator to x and store in appropriate row of y
-            for n in range(numInterps):
-                flatY[n] = flatInterps[n](x)
-            # Create list of indices that will move specified axis from last place to correct location
-            newAxisOrder = range(len(outShape))
-            newAxisOrder.insert(self._axis, newAxisOrder.pop())
-            return y.transpose(newAxisOrder)
-        except AttributeError:
+        if self._interps == None:
             raise AttributeError, "Interpolator functions not fitted to data yet - first call 'fit'."
+        # Create blank output array with specified axis appended at the end of shape
+        outShape = list(self._interps.shape)
+        outShape.append(len(x))
+        y = np.ndarray(outShape)
+        numInterps = np.array(self._interps.shape).prod()
+        # Rearrange to form 2-D array of data and 1-D array of interpolators
+        flatY = y.reshape(numInterps, len(x))
+        assert flatY.base is y, "Reshaping array resulted in a copy instead of a view - bad news for this code..."
+        flatInterps = self._interps.ravel()
+        # Apply each interpolator to x and store in appropriate row of y
+        for n in range(numInterps):
+            flatY[n] = flatInterps[n](x)
+        # Create list of indices that will move specified axis from last place to correct location
+        newAxisOrder = range(len(outShape))
+        newAxisOrder.insert(self._axis, newAxisOrder.pop())
+        return y.transpose(newAxisOrder)
