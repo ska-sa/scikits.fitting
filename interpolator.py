@@ -51,15 +51,15 @@ class Interpolator(object):
 # This uses numpy's polyfit and polyval.
 class PolynomialFit(Interpolator):
     ## Initialiser.
-    # @param self   The current object
-    # @param degree Polynomial degree (required)
-    # @param rcond  Relative condition number of fit 
-    #               (smallest singular value that will be used to fit polynomial, has sensible default)
-    def __init__(self, degree, rcond=None):
+    # @param self      The current object
+    # @param maxDegree Maximum polynomial degree to use (reduced if there are not enough data points)
+    # @param rcond     Relative condition number of fit
+    #                  (smallest singular value that will be used to fit polynomial, has sensible default)
+    def __init__(self, maxDegree, rcond=None):
         Interpolator.__init__(self)
         ## @var _degree
         # Polynomial degree
-        self._degree = degree
+        self.maxDegree = maxDegree
         ## @var _rcond
         # Relative condition number of fit
         self._rcond = rcond
@@ -68,7 +68,7 @@ class PolynomialFit(Interpolator):
         self._mean = None
         ## @var _poly
         # Polynomial coefficients, only set after fit()
-        self._poly = None
+        self.poly = None
     
     ## Fit polynomial to data.
     # @param self The current object
@@ -78,16 +78,17 @@ class PolynomialFit(Interpolator):
         x = np.asarray(x)
         # Polynomial fits perform better if input data is centred around origin [see numpy.polyfit help]
         self._mean = x.mean()
-        self._poly = np.polyfit(x - self._mean, y, self._degree, rcond = self._rcond)
+        # Reduce polynomial degree if there is not enough points to fit (degree should be < len(x))
+        self.poly = np.polyfit(x - self._mean, y, min((self.maxDegree, len(x)-1)), rcond = self._rcond)
     
     ## Evaluate polynomial on new data.
     # @param self The current object
     # @param x    Input to function as a 1-D numpy array, or sequence
     # @return     Output of function as a 1-D numpy array
     def __call__(self, x):
-        if (self._poly == None) or (self._mean == None):
+        if (self.poly == None) or (self._mean == None):
             raise AttributeError, "Polynomial not fitted to data yet - first call 'fit'."
-        return np.polyval(self._poly, x - self._mean)
+        return np.polyval(self.poly, x - self._mean)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  ReciprocalFit

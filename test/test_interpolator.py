@@ -23,9 +23,14 @@ class PolynomialFitTestCases(unittest.TestCase):
         interp.fit(self.x, self.y)
         y = interp(self.x)
         self.assertAlmostEqual(interp._mean, 0.0, places=7)
-        np.testing.assert_almost_equal(interp._poly, self.poly, decimal=7)
+        np.testing.assert_almost_equal(interp.poly, self.poly, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
-
+    
+    def test_reduce_degree(self):
+        interp = interpolator.PolynomialFit(2)
+        interp.fit([1.0],[1.0])
+        np.testing.assert_almost_equal(interp.poly, [1.0], decimal=7)
+        
 class ReciprocalFitTestCases(unittest.TestCase):
     
     def setUp(self):
@@ -39,7 +44,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         interp.fit(self.x, self.y)
         y = interp(self.x)
         self.assertAlmostEqual(interp._interp._mean, 0.0, places=7)
-        np.testing.assert_almost_equal(interp._interp._poly, self.poly, decimal=7)
+        np.testing.assert_almost_equal(interp._interp.poly, self.poly, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
 
 class Independent1DFit(unittest.TestCase):
@@ -68,10 +73,10 @@ class Independent1DFit(unittest.TestCase):
         y = interp(self.x)
         self.assertEqual(interp._axis, self.axis)
         self.assertEqual(interp._interps.shape, (2,3))
-        np.testing.assert_almost_equal(interp._interps[0,0]._poly, self.poly1, decimal=7)
-        np.testing.assert_almost_equal(interp._interps[0,1]._poly, self.poly2, decimal=7)
-        np.testing.assert_almost_equal(interp._interps[0,2]._poly, self.poly1, decimal=7)
-        np.testing.assert_almost_equal(interp._interps[1,0]._poly, self.poly2, decimal=7)
-        np.testing.assert_almost_equal(interp._interps[1,1]._poly, self.poly1, decimal=7)
-        np.testing.assert_almost_equal(interp._interps[1,2]._poly, self.poly2, decimal=7)
+        np.testing.assert_almost_equal(interp._interps[0,0].poly, self.poly1, decimal=7)
+        np.testing.assert_almost_equal(interp._interps[0,1].poly, self.poly2, decimal=7)
+        np.testing.assert_almost_equal(interp._interps[0,2].poly, self.poly1, decimal=7)
+        np.testing.assert_almost_equal(interp._interps[1,0].poly, self.poly2, decimal=7)
+        np.testing.assert_almost_equal(interp._interps[1,1].poly, self.poly1, decimal=7)
+        np.testing.assert_almost_equal(interp._interps[1,2].poly, self.poly2, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
