@@ -19,7 +19,7 @@ class PolynomialFitTestCases(unittest.TestCase):
         
     def test_fit_eval(self):
         interp = interpolator.PolynomialFit(2)
-        self.assertRaises(AttributeError, interp, (self.x))
+        self.assertRaises(AttributeError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         self.assertAlmostEqual(interp._mean, 0.0, places=7)
@@ -40,7 +40,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
     
     def test_fit_eval(self):
         interp = interpolator.ReciprocalFit(interpolator.PolynomialFit(2))
-        self.assertRaises(AttributeError, interp, (self.x))
+        self.assertRaises(AttributeError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         self.assertAlmostEqual(interp._interp._mean, 0.0, places=7)
@@ -80,3 +80,39 @@ class Independent1DFit(unittest.TestCase):
         np.testing.assert_almost_equal(interp._interps[1,1].poly, self.poly1, decimal=7)
         np.testing.assert_almost_equal(interp._interps[1,2].poly, self.poly2, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
+
+class Delaunay2DFit(unittest.TestCase):
+
+    def setUp(self):
+        # Square diamond shape
+        self.x = np.array([[-1,0,0,0,1], [0,-1,0,1,0]])
+        self.y = np.array([1,1,1,1,1])
+        self.testx = np.array([[-0.5,0,0.5,0], [0,-0.5,0.5,0]])
+        self.testy = np.array([1,1,1,1])
+        self.defaultVal = 100
+        self.outsidex = np.array([[10],[10]])
+        self.outsidey = np.array([self.defaultVal])
+        
+    def test_fit_eval_linear(self):
+        interp = interpolator.Delaunay2DFit('linear', defaultVal=self.defaultVal)
+        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        np.testing.assert_almost_equal(y, self.y, decimal=7)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=7)
+        np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=7)
+        
+    def test_fit_eval_nn(self):
+        interp = interpolator.Delaunay2DFit('nn', defaultVal=self.defaultVal)
+        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        np.testing.assert_almost_equal(y, self.y, decimal=7)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=7)
+        np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=7)

@@ -8,6 +8,7 @@
 
 # pylint: disable-msg=C0103,R0903
 
+import scipy.sandbox.delaunay as delaunay
 import numpy as np
 import copy
 
@@ -57,7 +58,7 @@ class PolynomialFit(Interpolator):
     #                  (smallest singular value that will be used to fit polynomial, has sensible default)
     def __init__(self, maxDegree, rcond=None):
         Interpolator.__init__(self)
-        ## @var _degree
+        ## @var maxDegree
         # Polynomial degree
         self.maxDegree = maxDegree
         ## @var _rcond
@@ -66,7 +67,7 @@ class PolynomialFit(Interpolator):
         ## @var _mean
         # Mean of input data, only set after fit()
         self._mean = None
-        ## @var _poly
+        ## @var poly
         # Polynomial coefficients, only set after fit()
         self.poly = None
     
@@ -109,14 +110,14 @@ class ReciprocalFit(Interpolator):
     
     # Fit stored interpolator to reciprocal of data, i.e. fit function '1/y = f(x)'.
     # @param self The current object
-    # @param x    Known input values as a 1-D numpy array or sequence
-    # @param y    Known output values as a 1-D numpy array, or sequence
+    # @param x    Known input values as a numpy array
+    # @param y    Known output values as a numpy array
     def fit(self, x, y):
         self._interp.fit(x, 1.0 / y)
     
     ## Evaluate function '1/f(x)' on new data, where f is interpolated from previous data.
     # @param self The current object
-    # @param x    Input to function as a 1-D numpy array, or sequence
+    # @param x    Input to function as a numpy array
     # @return     Output of function as a numpy array
     def __call__(self, x):
         return 1.0 / self._interp(x)
@@ -196,3 +197,89 @@ class Independent1DFit(Interpolator):
         newAxisOrder = range(len(outShape))
         newAxisOrder.insert(self._axis, newAxisOrder.pop())
         return y.transpose(newAxisOrder)
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  Delaunay2DFit
+#----------------------------------------------------------------------------------------------------------------------
+
+## Interpolates a scalar function of 2-D data, based on Delaunay triangulation.
+# The x data for this object should have two rows, containing the 'x' and 'y' coordinates of points in a plane.
+# The 2-D points are therefore stored as column vectors in x. The y data for this object is a 1-D array, which
+# represents the scalar 'z' value of the function defined on the plane (all symbols in quotation marks refer to
+# the versions found in the delaunay documentation.)
+class Delaunay2DFit(Interpolator):
+    ## Initialiser
+    # @param self       The current object
+    # @param interpType String indicating type of interpolation ('linear' or 'nn': only 'nn' currently supported)
+    # @param defaultVal Default value used when trying to extrapolate beyond convex hull of known data [default=NaN]
+    def __init__(self, interpType, defaultVal=np.nan):
+        Interpolator.__init__(self)
+        ## @var interpType
+        # String indicating type of interpolation ('linear' or 'nn')
+        self.interpType = interpType
+        ## @var defaultVal
+        # Default value used when trying to extrapolate beyond convex hull of known data
+        self.defaultVal = defaultVal
+        ## @var _interp
+        # Interpolator function, only set after fit()
+        self._interp = None
+    
+    ## Fit function 'y = f(x)' to data.
+    # This fits a scalar function defined on 2-D data to the provided x-y pairs.
+    # @param self The current object
+    # @param x    Known input values as a 2-D numpy array, or sequence (of shape (2,N))
+    # @param y    Known output values as a 1-D numpy array, or sequence (of shape (N))
+    def fit(self, x, y):
+        # Check dimensions of known data
+        x = np.atleast_2d(np.asarray(x))
+        y = np.atleast_1d(np.asarray(y))
+        if (len(x.shape) != 2) or (x.shape[0] != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
+            raise ValueError, "Delaunay interpolator requires input data with shape (2,N) and output data with " \
+                              " shape (N), got " + str(x.shape) + " and " + str(y.shape) + " instead."
+        tri = delaunay.Triangulation(x[0], x[1])
+        if self.interpType == 'linear':
+            # Use 'nn' throughout until linear interpolation works in scipy
+            self._interp = tri.nn_interpolator(y, default_value=self.defaultVal)
+        else:
+            self._interp = tri.nn_interpolator(y, default_value=self.defaultVal)
+    
+    ## Evaluate function 'y = f(x)' on new data.
+    # Evaluates the fitted scalar function on 2-D data provided in x.
+    # @param self The current object
+    # @param x    Input to function as a 2-D numpy array, or sequence (of shape (2,N))
+    # @return     Output of function as a 1-D numpy array (of shape (N))
+    def __call__(self, x):
+        # Check dimensions
+        x = np.atleast_2d(np.asarray(x))
+        if (len(x.shape) != 2) or (x.shape[0] != 2):
+            raise ValueError, "Delaunay interpolator requires input data with shape (2,N), got " + \
+                              str(x.shape) + " instead."
+        if self._interp == None:
+            raise AttributeError, "Interpolator function not fitted to data yet - first call 'fit'."
+        return self._interp(x[0], x[1])
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  TemplateFunctionFit
+#----------------------------------------------------------------------------------------------------------------------
+
+#
+#class TemplateFunctionFit(Interpolator):
+#    ## Initialiser
+#    # @param self The current object
+#    # @param templateFunc Template function to be fit to x-y data
+#    def __init__(self, templateFunc):
+#        Interpolator.__init__(self)
+#        self._templateFunc = templateFunc
+    
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  GaussianFit
+#----------------------------------------------------------------------------------------------------------------------
+
+#class GaussianFit(Interpolator):
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  SampledTemplateFit
+#----------------------------------------------------------------------------------------------------------------------
+
+#class SampledTemplateFit(Interpolator):
+
