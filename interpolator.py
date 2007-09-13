@@ -8,9 +8,86 @@
 
 # pylint: disable-msg=C0103,R0903
 
+import scipy.optimize as optimize
 import scipy.sandbox.delaunay as delaunay
 import numpy as np
 import copy
+import logging
+
+logger = logging.getLogger("xdmsbe.xdmsbelib.interpolator")
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- FUNCTIONS
+#----------------------------------------------------------------------------------------------------------------------
+
+## Flatten array, but not necessarily all the way to a 1-D array.
+# This function is useful for broadcasting functions of arbitrary dimensionality along a given array. The array x is
+# transposed and reshaped, so that the axes with indices listed in flattenAxes are collected either at the start or
+# end of the array (based on the moveToStart flag). These axes are also flattened to a single axis, while preserving 
+# the total number of elements in the array. The reshaping and transposition usually results in a view of the 
+# original array, although a copy may result e.g. if discontiguous flattenAxes are chosen. The two extreme cases are
+# flattenAxes = [] or None, which results in the original array with no flattening, and flattenAxes = 
+# range(len(x.shape)), which is equivalent to x.ravel() and therefore full flattening.
+# 
+# Examples:
+# x.shape => (2,4,10)
+# semi_flatten(x, [], True).shape => (2,4,10) [no flattening, x returned unchanged]
+# semi_flatten(x, (1), True).shape => (4,2,10)
+# semi_flatten(x, (1), False).shape => (2,10,4)
+# semi_flatten(x, (0,2), True).shape => (20,4)
+# semi_flatten(x, (0,2), False).shape => (4,20)
+# semi_flatten(x, (0,1,2), True).shape => (80,) [same as x.ravel()]
+#
+# @param x           Numpy array, or sequence
+# @param flattenAxes List of axes along which x should be flattened
+# @param moveToStart Flag indicating whether flattened axis is moved to start or end of array [default=True]
+# @return            Semi-flattened version of x, as numpy array
+def semi_flatten(x, flattenAxes, moveToStart=True):
+    x = np.asarray(x)
+    xShape = np.atleast_1d(np.asarray(x.shape))
+    # Split list of axes into those that will be flattened and the rest, which are considered the main axes
+    flattenAxes = np.atleast_1d(np.asarray(flattenAxes)).tolist()
+    if flattenAxes == [None]:
+        flattenAxes = []
+    mainAxes = list(set(range(len(xShape))) - set(flattenAxes))
+    # After flattening, the array will contain flattenShape number of mainShape-shaped subarrays
+    flattenShape = [xShape[flattenAxes].prod()]
+    # Don't add any singleton dimensions during flattening - rather leave the matrix as is
+    if flattenShape == [1]:
+        flattenShape = []
+    mainShape = xShape[mainAxes].tolist()
+    # Move specified axes to the beginning (or end) of list of axes, and transpose and reshape array accordingly
+    if moveToStart:
+        return x.transpose(flattenAxes + mainAxes).reshape(flattenShape + mainShape)
+    else:
+        return x.transpose(mainAxes + flattenAxes).reshape(mainShape + flattenShape)
+
+## Restore an array that was reshaped by semi_flatten().
+# @param x             Numpy array, or sequence
+# @param flattenAxes   List of (original) axes along which x was flattened
+# @param originalShape Original shape of x, before flattening
+# @param moveFromStart Flag indicating whether flattened axes were moved to start or end of array [default=True]
+# @return              Restored version of x, as numpy array
+def semi_unflatten(x, flattenAxes, originalShape, moveFromStart=True):
+    x = np.asarray(x)
+    originalShape = np.atleast_1d(np.asarray(originalShape))
+    # Split list of axes into those that will be flattened and the rest, which are considered the main axes
+    flattenAxes = np.atleast_1d(np.asarray(flattenAxes)).tolist()
+    if flattenAxes == [None]:
+        flattenAxes = []
+    mainAxes = list(set(range(len(originalShape))) - set(flattenAxes))
+    # After unflattening, the flattenAxes will be reconstructed with the correct dimensionality
+    unflattenShape = originalShape[flattenAxes].tolist()
+    # Don't add any singleton dimensions during flattening - rather leave the matrix as is
+    if unflattenShape == [1]:
+        unflattenShape = []
+    mainShape = originalShape[mainAxes].tolist()
+    # Move specified axes from the beginning (or end) of list of axes, and transpose and reshape array accordingly
+    if moveFromStart:
+        return x.reshape(unflattenShape + mainShape).transpose(np.array(flattenAxes + mainAxes).argsort())
+    else:
+        return x.reshape(mainShape + unflattenShape).transpose(np.array(mainAxes + flattenAxes).argsort())
+
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- INTERFACE :  Interpolator
@@ -76,7 +153,8 @@ class PolynomialFit(Interpolator):
     # @param x    Known input values as a 1-D numpy array or sequence
     # @param y    Known output values as a 1-D numpy array, or sequence
     def fit(self, x, y):
-        x = np.asarray(x)
+        x = np.atleast_1d(np.asarray(x))
+        y = np.atleast_1d(np.asarray(y))
         # Polynomial fits perform better if input data is centred around origin [see numpy.polyfit help]
         self._mean = x.mean()
         # Reduce polynomial degree if there is not enough points to fit (degree should be < len(x))
@@ -89,6 +167,7 @@ class PolynomialFit(Interpolator):
     def __call__(self, x):
         if (self.poly == None) or (self._mean == None):
             raise AttributeError, "Polynomial not fitted to data yet - first call 'fit'."
+        x = np.atleast_1d(np.asarray(x))
         return np.polyval(self.poly, x - self._mean)
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -113,6 +192,7 @@ class ReciprocalFit(Interpolator):
     # @param x    Known input values as a numpy array
     # @param y    Known output values as a numpy array
     def fit(self, x, y):
+        y = np.asarray(y)
         self._interp.fit(x, 1.0 / y)
     
     ## Evaluate function '1/f(x)' on new data, where f is interpolated from previous data.
@@ -151,7 +231,8 @@ class Independent1DFit(Interpolator):
     # @param x    Known input values as a 1-D numpy array or sequence
     # @param y    Known output values as an N-D numpy array
     def fit(self, x, y):
-        y = np.asarray(y)
+        x = np.atleast_1d(np.asarray(x))
+        y = np.atleast_1d(np.asarray(y))
         if self._axis >= len(y.shape):
             raise ValueError, "Provided y-array does not have the specified axis " + str(self._axis) + "."
         if y.shape[self._axis] != len(x):
@@ -181,6 +262,7 @@ class Independent1DFit(Interpolator):
     def __call__(self, x):
         if self._interps == None:
             raise AttributeError, "Interpolator functions not fitted to data yet - first call 'fit'."
+        x = np.atleast_1d(np.asarray(x))
         # Create blank output array with specified axis appended at the end of shape
         outShape = list(self._interps.shape)
         outShape.append(len(x))
@@ -205,14 +287,14 @@ class Independent1DFit(Interpolator):
 ## Interpolates a scalar function of 2-D data, based on Delaunay triangulation.
 # The x data for this object should have two rows, containing the 'x' and 'y' coordinates of points in a plane.
 # The 2-D points are therefore stored as column vectors in x. The y data for this object is a 1-D array, which
-# represents the scalar 'z' value of the function defined on the plane (all symbols in quotation marks refer to
-# the versions found in the delaunay documentation.)
+# represents the scalar 'z' value of the function defined on the plane (the symbols in quotation marks are the
+# names for these variables used in the delaunay documentation.)
 class Delaunay2DFit(Interpolator):
     ## Initialiser
     # @param self       The current object
     # @param interpType String indicating type of interpolation ('linear' or 'nn': only 'nn' currently supported)
     # @param defaultVal Default value used when trying to extrapolate beyond convex hull of known data [default=NaN]
-    def __init__(self, interpType, defaultVal=np.nan):
+    def __init__(self, interpType='nn', defaultVal=np.nan):
         Interpolator.__init__(self)
         ## @var interpType
         # String indicating type of interpolation ('linear' or 'nn')
@@ -259,24 +341,121 @@ class Delaunay2DFit(Interpolator):
         return self._interp(x[0], x[1])
 
 #----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  TemplateFunctionFit
+#--- CLASS :  NonLinearLeastSquaresFit
 #----------------------------------------------------------------------------------------------------------------------
 
-#
-#class TemplateFunctionFit(Interpolator):
-#    ## Initialiser
-#    # @param self The current object
-#    # @param templateFunc Template function to be fit to x-y data
-#    def __init__(self, templateFunc):
-#        Interpolator.__init__(self)
-#        self._templateFunc = templateFunc
+## Fits a generic function to data, based on non-linear least squares optimisation of a parameter vector.
+# This fits a function of the form 'y = f(p,x)' to x-y data, where the parameter vector p is optimised via
+# least squares. It is assumed that the data presented to fit() consist of stacks of x and y arrays, where
+# each element in the x stack is of the right shape to serve as input to f(), and each element of the y stack
+# is compatible with the output of f(). The (list of) axes along which the x and y data are stacked, can be 
+# specified independently.
+# @todo Upgrade single axis stacking to multi-dimensional stacking, with helper functions to perform
+#       "partial unravelling" of arrays (and the reverse process). This is also useful for Independent1DFit.
+class NonLinearLeastSquaresFit(Interpolator):
+    ## Initialiser.
+    # @param self    The current object
+    # @param func    Generic function to be fit to x-y data, of the form 'y = f(p,x)'
+    # @param params0 Initial guess of function parameter vector p
+    # @param xAxes   List of axes along which x data are stacked [default=None]
+    # @param yAxes   List of axes along which y data are stacked [default=None]
+    # @param method  Optimisation method (name of corresponding scipy.optimize function) [default='fmin_bfgs']
+    # @param kwargs  Additional keyword arguments are passed to underlying optimiser
+    # pylint: disable-msg=R0913
+    def __init__(self, func, params0, xAxes=None, yAxes=None, method='fmin_bfgs', **kwargs):
+        Interpolator.__init__(self)
+        ## @var func
+        # Generic function object to be fit to data
+        self.func = func
+        ## @var params
+        # Function parameter vector, either initial guess or final optimal value
+        self.params = params0
+        ## @var _xAxes
+        # Axes along which x data are stacked
+        self._xAxes = xAxes
+        ## @var _yAxes
+        # Axes along which y data are stacked
+        self._yAxes = yAxes
+        try:
+            ## @var _optimizer
+            # Optimiser method from scipy.optimize to use
+            self._optimizer = optimize.__dict__[method]
+        except KeyError:
+            raise KeyError, 'Optimisation method "' + method + '" unknown - should be one of:\n' \
+                            + str(optimize.__dict__.iterkeys())
+        ## @var _optimArgs
+        # Extra keyword arguments to optimiser
+        self._optimArgs = kwargs
+        self._optimArgs.update({'full_output': 1})
+        ## @var _yShape
+        # Saved shape of output data, only set after fit()
+        self._yShape = None
+        
+    ## Fit function to data, by performing non-linear least squares optimisation.
+    # This determines the optimal parameter vector p* so that the function 'y = f(p,x)' best fits the
+    # observed x-y data, in a least-squares sense.
+    # @param self The current object
+    # @param x    Known input values as a numpy array
+    # @param y    Known output values as a numpy array
+    def fit(self, x, y):
+        x = np.asarray(x)
+        y = np.asarray(y)
+        self._yShape = y.shape
+        # Sum-of-squares cost function to be minimised
+        def cost(p):
+            if not self._xAxes:
+                yfunc = self.func(p, x)
+            else:
+                yfunc = np.array([self.func(p, xx) for xx in semi_flatten(x, self._xAxes)])
+            if self._optimizer.__name__ == 'leastsq':
+                return (semi_flatten(y, self._yAxes) - yfunc).ravel()
+            else:
+                return ((semi_flatten(y, self._yAxes) - yfunc)**2).sum()
+        # Do optimisation
+        # pylint: disable-msg=W0142
+        self.params = self._optimizer(cost, self.params, **self._optimArgs)[0]
     
+    ## Evaluate fitted function on new data.
+    # Evaluates the fitted function 'y = f(p*,x)' on new x data.
+    # @param self The current object
+    # @param x    Input to function as a numpy array
+    # @return     Output of function as a numpy array
+    def __call__(self, x):
+        x = np.asarray(x)
+        if not self._xAxes:
+            y = self.func(self.params, x)
+        else:
+            y = np.array([self.func(self.params, xx) for xx in semi_flatten(x, self._xAxes)])
+        return semi_unflatten(y, self._yAxes, self._yShape)
+
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  GaussianFit
 #----------------------------------------------------------------------------------------------------------------------
 
+##
 #class GaussianFit(Interpolator):
-
+    ## Initialiser
+    # @param self The current object
+#    def __init__(self, dim, interp):
+#        Interpolator.__init__(self)
+#        self.dim = dim
+    
+    
+    ## Fit a Gaussian to data.
+    # @param self The current object
+    # @param x    Known input values as a numpy array
+    # @param y    Known output values as a numpy array
+#    def fit(self, x, y):
+#        pass
+    
+    ## Evaluate function 'y = f(x)' on new data.
+    # Evaluates the fitted scalar function on 2-D data provided in x.
+    # @param self The current object
+    # @param x    Input to function as a 2-D numpy array, or sequence (of shape (2,N))
+    # @return     Output of function as a 1-D numpy array (of shape (N))
+#    def __call__(self, x):
+#        pass
+    
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit
 #----------------------------------------------------------------------------------------------------------------------

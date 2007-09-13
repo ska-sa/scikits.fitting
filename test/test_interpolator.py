@@ -116,3 +116,44 @@ class Delaunay2DFit(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=7)
         np.testing.assert_almost_equal(testy, self.testy, decimal=7)
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=7)
+
+class NonLinearLeastSquaresFit(unittest.TestCase):
+
+    def setUp(self):
+        # Quadratic function centred at p
+        self.func = lambda p, x: ((x - p)**2).sum()
+        self.x = 4.0*np.random.randn(2, 20)
+        self.trueParams = np.array([1, -4])
+        self.params0 = np.array([0, 0])
+        self.y = np.array([self.func(self.trueParams, xx) for xx in self.x.transpose()])
+        
+    def test_fit_eval(self):
+        self.assertRaises(KeyError, interpolator.NonLinearLeastSquaresFit, self.func, self.params0, 1, 0, 'bollie')
+        interp = interpolator.NonLinearLeastSquaresFit(self.func, self.params0, 1, 0, 'fmin_bfgs', disp=0)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        np.testing.assert_almost_equal(interp.params, self.trueParams, decimal=7)
+        np.testing.assert_almost_equal(y, self.y, decimal=5)
+
+class GaussianFit(unittest.TestCase):
+
+    def setUp(self):
+        self.dim = 2
+        
+        def lngauss_diagcov(p, x):
+            xminmu = x - np.repeat(p[np.newaxis, 0:self.dim], x.shape[0], axis=0)
+            return p[2*self.dim] - 0.5 * np.dot(xminmu * xminmu, p[self.dim:2*self.dim])
+        
+        self.trueParams = np.array([3, -2, 10, 10, np.log(10)])
+        self.x = np.random.randn(80, 2)
+        self.y = lngauss_diagcov(self.trueParams, self.x)
+#        self.y += 0.001*np.random.randn(self.y.shape)
+        
+        self.initialParams = np.array([0, 0, 1, 1, 0])
+        self.interp_diag = interpolator.NonLinearLeastSquaresFit(lngauss_diagcov, self.initialParams, method='leastsq')
+    
+    def test_fit_eval_diagcov(self):
+        self.interp_diag.fit(self.x, self.y)
+        y = self.interp_diag(self.x)
+        np.testing.assert_almost_equal(self.interp_diag.params, self.trueParams, decimal=7)
+        np.testing.assert_almost_equal(y, self.y, decimal=7)
