@@ -21,13 +21,13 @@ logger = logging.getLogger("xdmsbe.xdmsbelib.interpolator")
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Flatten array, but not necessarily all the way to a 1-D array.
-# This function is useful for broadcasting functions of arbitrary dimensionality along a given array. The array x is
-# transposed and reshaped, so that the axes with indices listed in flattenAxes are collected either at the start or
-# end of the array (based on the moveToStart flag). These axes are also flattened to a single axis, while preserving 
-# the total number of elements in the array. The reshaping and transposition usually results in a view of the 
-# original array, although a copy may result e.g. if discontiguous flattenAxes are chosen. The two extreme cases are
-# flattenAxes = [] or None, which results in the original array with no flattening, and flattenAxes = 
-# range(len(x.shape)), which is equivalent to x.ravel() and therefore full flattening.
+# This helper function is useful for broadcasting functions of arbitrary dimensionality along a given array. 
+# The array x is transposed and reshaped, so that the axes with indices listed in flattenAxes are collected 
+# either at the start or end of the array (based on the moveToStart flag). These axes are also flattened to 
+# a single axis, while preserving the total number of elements in the array. The reshaping and transposition 
+# usually results in a view of the original array, although a copy may result e.g. if discontiguous flattenAxes 
+# are chosen. The two extreme cases are flattenAxes = [] or None, which results in the original array with no 
+# flattening, and flattenAxes = range(len(x.shape)), which is equivalent to x.ravel() and therefore full flattening.
 # 
 # Examples:
 # x.shape => (2,4,10)
@@ -88,6 +88,15 @@ def semi_unflatten(x, flattenAxes, originalShape, moveFromStart=True):
     else:
         return x.reshape(mainShape + unflattenShape).transpose(np.array(mainAxes + flattenAxes).argsort())
 
+## Factory that creates a vectorised version of a function to be fitted to data.
+# This takes functions of the form 'y = f(p,x)' which cannot handle sequences of input arrays for x, and wraps
+# it in a loop which calls f with the elements of the sequence of x values, and returns the corresponding sequence.
+# @param func Function f(p,x) to be vectorised along input x
+# @return Vectorised version of function
+def vectorizeFitFunc(func):
+    def vecFunc(p, x):
+        return np.array([func(p, xx) for xx in x])
+    return vecFunc
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- INTERFACE :  Interpolator
@@ -122,12 +131,12 @@ class Interpolator(object):
         raise NotImplementedError
 
 #----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  PolynomialFit
+#--- CLASS :  Polynomial1DFit
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Fits polynomial to 1-D data.
 # This uses numpy's polyfit and polyval.
-class PolynomialFit(Interpolator):
+class Polynomial1DFit(Interpolator):
     ## Initialiser.
     # @param self      The current object
     # @param maxDegree Maximum polynomial degree to use (reduced if there are not enough data points)
@@ -344,25 +353,30 @@ class Delaunay2DFit(Interpolator):
 #--- CLASS :  NonLinearLeastSquaresFit
 #----------------------------------------------------------------------------------------------------------------------
 
-## Fits a generic function to data, based on non-linear least squares optimisation of a parameter vector.
+## Fit a generic function to data, based on non-linear least squares optimisation.
 # This fits a function of the form 'y = f(p,x)' to x-y data, where the parameter vector p is optimised via
-# least squares. It is assumed that the data presented to fit() consist of stacks of x and y arrays, where
-# each element in the x stack is of the right shape to serve as input to f(), and each element of the y stack
-# is compatible with the output of f(). The (list of) axes along which the x and y data are stacked, can be 
-# specified independently.
-# @todo Upgrade single axis stacking to multi-dimensional stacking, with helper functions to perform
-#       "partial unravelling" of arrays (and the reverse process). This is also useful for Independent1DFit.
+# least squares. It is assumed that the data presented to fit() consists of a sequence of x and y arrays, 
+# where each element in the sequence is of the right shape to serve as input or output to f(). The helper 
+# functions semi_flatten() and semi_unflatten() are useful to get the x and y arrays in this form. 
+#
+# The function f(p,x) should be able to operate on sequences of x arrays (i.e. should be vectorised). If it 
+# cannot, use the helper function vectorizeFitFunc() to wrap the function before passing it to this class. 
+#
+# The Jacobian of the function (if available) should return an array of shape (normal y shape, N), where 
+# N = len(p) is the number of function parameters. Each element of this array indicates the derivative of the
+# i'th output value with respect to the j'th parameter, evaluated at the given p and x. This function should
+# also be vectorised, similar to f.
 class NonLinearLeastSquaresFit(Interpolator):
     ## Initialiser.
-    # @param self    The current object
-    # @param func    Generic function to be fit to x-y data, of the form 'y = f(p,x)'
-    # @param params0 Initial guess of function parameter vector p
-    # @param xAxes   List of axes along which x data are stacked [default=None]
-    # @param yAxes   List of axes along which y data are stacked [default=None]
-    # @param method  Optimisation method (name of corresponding scipy.optimize function) [default='fmin_bfgs']
-    # @param kwargs  Additional keyword arguments are passed to underlying optimiser
+    # @param self         The current object
+    # @param func         Generic function to be fit to x-y data, of the form 'y = f(p,x)' (should be vectorised)
+    # @param params0      Initial guess of function parameter vector p
+    # @param funcJacobian Jacobian of function f, if available, with signature 'J = f(p,x)', where J has the
+    #                     shape (y shape produced by f(p,x), len(p))
+    # @param method       Optimisation method (name of corresponding scipy.optimize function) [default='leastsq']
+    # @param kwargs       Additional keyword arguments are passed to underlying optimiser
     # pylint: disable-msg=R0913
-    def __init__(self, func, params0, xAxes=None, yAxes=None, method='fmin_bfgs', **kwargs):
+    def __init__(self, func, params0, funcJacobian=None, method='leastsq', **kwargs):
         Interpolator.__init__(self)
         ## @var func
         # Generic function object to be fit to data
@@ -370,12 +384,9 @@ class NonLinearLeastSquaresFit(Interpolator):
         ## @var params
         # Function parameter vector, either initial guess or final optimal value
         self.params = params0
-        ## @var _xAxes
-        # Axes along which x data are stacked
-        self._xAxes = xAxes
-        ## @var _yAxes
-        # Axes along which y data are stacked
-        self._yAxes = yAxes
+        ## @var funcJacobian
+        # Jacobian of function, if available
+        self.funcJacobian = funcJacobian
         try:
             ## @var _optimizer
             # Optimiser method from scipy.optimize to use
@@ -386,31 +397,33 @@ class NonLinearLeastSquaresFit(Interpolator):
         ## @var _optimArgs
         # Extra keyword arguments to optimiser
         self._optimArgs = kwargs
-        self._optimArgs.update({'full_output': 1})
-        ## @var _yShape
-        # Saved shape of output data, only set after fit()
-        self._yShape = None
+        self._optimArgs['full_output'] = 1
         
     ## Fit function to data, by performing non-linear least squares optimisation.
     # This determines the optimal parameter vector p* so that the function 'y = f(p,x)' best fits the
     # observed x-y data, in a least-squares sense.
     # @param self The current object
-    # @param x    Known input values as a numpy array
-    # @param y    Known output values as a numpy array
+    # @param x    Sequence of input values as a numpy array, of shape (K, normal x shape)
+    # @param y    Sequence of output values as a numpy array, of shape (K, normal y shape)
     def fit(self, x, y):
         x = np.asarray(x)
         y = np.asarray(y)
-        self._yShape = y.shape
-        # Sum-of-squares cost function to be minimised
+        # Sum-of-squares cost function to be minimised (or M residuals for leastsq)
         def cost(p):
-            if not self._xAxes:
-                yfunc = self.func(p, x)
-            else:
-                yfunc = np.array([self.func(p, xx) for xx in semi_flatten(x, self._xAxes)])
+            residuals = y - self.func(p, x)
             if self._optimizer.__name__ == 'leastsq':
-                return (semi_flatten(y, self._yAxes) - yfunc).ravel()
+                return residuals.ravel()
             else:
-                return ((semi_flatten(y, self._yAxes) - yfunc)**2).sum()
+                return (residuals**2).sum()
+        # Jacobian (M,N) matrix of function at given p and x values (derivatives along rows)
+        def jacobian(p):
+            # Produce Jacobian of residual - array with shape (K, normal y shape, N)
+            residualJac = - self.funcJacobian(p, x)
+            # Squash every axis except last one together, to get (M,N) shape
+            return semi_flatten(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
+        # Register Jacobian function if applicable
+        if (self._optimizer.__name__ == 'leastsq') and (self.funcJacobian != None):
+            self._optimArgs['Dfun'] = jacobian
         # Do optimisation
         # pylint: disable-msg=W0142
         self.params = self._optimizer(cost, self.params, **self._optimArgs)[0]
@@ -421,40 +434,63 @@ class NonLinearLeastSquaresFit(Interpolator):
     # @param x    Input to function as a numpy array
     # @return     Output of function as a numpy array
     def __call__(self, x):
-        x = np.asarray(x)
-        if not self._xAxes:
-            y = self.func(self.params, x)
-        else:
-            y = np.array([self.func(self.params, xx) for xx in semi_flatten(x, self._xAxes)])
-        return semi_unflatten(y, self._yAxes, self._yShape)
+        return self.func(self.params, x)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  GaussianFit
 #----------------------------------------------------------------------------------------------------------------------
 
-##
-#class GaussianFit(Interpolator):
+## Fit Gaussian curve to multi-dimensional data.
+# This fits a D-dimensional Gaussian curve (with diagonal covariance matrix) to x-y data. Don't confuse this
+# with fitting a Gaussian pdf to random data! The Gaussian parameter vector contains the D elements of the mean 
+# vector, followed by D inverse variances, and the log height of the Gaussian curve. The Gaussian therefore has 
+# 2D+1 parameters. Internally, the Gaussian function is fit to the log of the y data, in order to simplify things.
+# This means that the optimisation criterion is not quite least-squares in the original x-y domain...
+# The underlying optimiser is based on the Levenberg-Marquardt algorithm (scipy.optimize.leastsq).
+class GaussianFit(Interpolator):
     ## Initialiser
-    # @param self The current object
-#    def __init__(self, dim, interp):
-#        Interpolator.__init__(self)
-#        self.dim = dim
+    # @param self    The current object
+    # @param params0 Initial guess of parameter vector, consisting of [mean, inverse variance, log height]
+    # pylint: disable-msg=W0612
+    def __init__(self, params0):
+        # D-dimensional log Gaussian curve, in vectorised form
+        def lngauss_diagcov(p, x):
+            dim = (len(p) - 1) // 2
+            xminmu = x - np.repeat(p[np.newaxis, 0:dim], x.shape[0], axis=0)
+            return p[2*dim] - 0.5 * np.dot(xminmu * xminmu, p[dim:2*dim])
+        # Jacobian of D-dimensional log Gaussian, in vectorised form
+        def lngauss_diagcov_jac(p, x):
+            dim = (len(p) - 1) // 2
+            K = x.shape[0]
+            xminmu = x - np.repeat(p[np.newaxis, 0:dim], K, axis=0)
+            dFdMu = xminmu * np.repeat(p[np.newaxis, dim:2*dim], K, axis=0)
+            dFdSigma = -0.5 * xminmu * xminmu
+            dFdHeight = np.ones((K, 1))
+            return np.hstack((dFdMu, dFdSigma, dFdHeight))
+        Interpolator.__init__(self)
+        ## @var params
+        # Gaussian parameter vector, either initial guess or final optimal value
+        self.params = params0
+        # Jacobian not working yet...
+#        self._interp = NonLinearLeastSquaresFit(lngauss_diagcov, self.params, lngauss_diagcov_jac, method='leastsq')
+        ## @var _interp
+        # Internal non-linear least squares fitter
+        self._interp = NonLinearLeastSquaresFit(lngauss_diagcov, self.params, method='leastsq')
     
-    
-    ## Fit a Gaussian to data.
+    ## Fit a Gaussian curve to data.
     # @param self The current object
-    # @param x    Known input values as a numpy array
-    # @param y    Known output values as a numpy array
-#    def fit(self, x, y):
-#        pass
+    # @param x    Sequence of D-dimensional input values as a numpy array, of shape (K, D)
+    # @param y    Sequence of 1-D output values as a numpy array, of shape (K,)
+    def fit(self, x, y):
+        self._interp.fit(x, np.log(y))
+        self.params = self._interp.params
     
     ## Evaluate function 'y = f(x)' on new data.
-    # Evaluates the fitted scalar function on 2-D data provided in x.
     # @param self The current object
-    # @param x    Input to function as a 2-D numpy array, or sequence (of shape (2,N))
-    # @return     Output of function as a 1-D numpy array (of shape (N))
-#    def __call__(self, x):
-#        pass
+    # @param x    Input to function as a numpy array, of shape (K, D)
+    # @return     Output of function as a numpy array, of shape (K,)
+    def __call__(self, x):
+        return np.exp(self._interp(x))
     
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit

@@ -10,7 +10,7 @@ import unittest
 import xdmsbe.xdmsbelib.interpolator as interpolator
 import numpy as np
 
-class PolynomialFitTestCases(unittest.TestCase):
+class Polynomial1DFitTestCases(unittest.TestCase):
     
     def setUp(self):
         self.poly = np.array([1.0, -2.0, 1.0])
@@ -18,7 +18,7 @@ class PolynomialFitTestCases(unittest.TestCase):
         self.y = np.polyval(self.poly, self.x)
         
     def test_fit_eval(self):
-        interp = interpolator.PolynomialFit(2)
+        interp = interpolator.Polynomial1DFit(2)
         self.assertRaises(AttributeError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -27,7 +27,7 @@ class PolynomialFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=7)
     
     def test_reduce_degree(self):
-        interp = interpolator.PolynomialFit(2)
+        interp = interpolator.Polynomial1DFit(2)
         interp.fit([1.0],[1.0])
         np.testing.assert_almost_equal(interp.poly, [1.0], decimal=7)
         
@@ -39,7 +39,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         self.y = 1.0 / np.polyval(self.poly, self.x)
     
     def test_fit_eval(self):
-        interp = interpolator.ReciprocalFit(interpolator.PolynomialFit(2))
+        interp = interpolator.ReciprocalFit(interpolator.Polynomial1DFit(2))
         self.assertRaises(AttributeError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -65,7 +65,7 @@ class Independent1DFit(unittest.TestCase):
         self.y[1,:,2] = np.polyval(self.poly2, self.x)
         
     def test_fit_eval(self):
-        interp = interpolator.Independent1DFit(interpolator.PolynomialFit(2), self.axis)
+        interp = interpolator.Independent1DFit(interpolator.Polynomial1DFit(2), self.axis)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.x, self.yTooLowDim)
         self.assertRaises(ValueError, interp.fit, self.x, self.yWrongSize)
@@ -121,39 +121,51 @@ class NonLinearLeastSquaresFit(unittest.TestCase):
 
     def setUp(self):
         # Quadratic function centred at p
-        self.func = lambda p, x: ((x - p)**2).sum()
-        self.x = 4.0*np.random.randn(2, 20)
+        func = lambda p, x: ((x - p)**2).sum()
+        self.vFunc = interpolator.vectorizeFitFunc(func)
         self.trueParams = np.array([1, -4])
-        self.params0 = np.array([0, 0])
-        self.y = np.array([self.func(self.trueParams, xx) for xx in self.x.transpose()])
-        
-    def test_fit_eval(self):
-        self.assertRaises(KeyError, interpolator.NonLinearLeastSquaresFit, self.func, self.params0, 1, 0, 'bollie')
-        interp = interpolator.NonLinearLeastSquaresFit(self.func, self.params0, 1, 0, 'fmin_bfgs', disp=0)
+        self.initParams = np.array([0, 0])
+        self.x = 4.0*np.random.randn(20, 2)
+        self.y = self.vFunc(self.trueParams, self.x)
+        # 2-D log Gaussian function
+        def lngauss_diagcov(p, x):
+            xminmu = x - np.repeat(p[np.newaxis, 0:2], x.shape[0], axis=0)
+            return p[4] - 0.5 * np.dot(xminmu * xminmu, p[2:4])
+        self.func2 = lngauss_diagcov
+        self.trueParams2 = np.array([3, -2, 10, 10, 4])
+        self.initParams2 = np.array([0, 0, 1, 1, 0])
+        self.x2 = np.random.randn(80, 2)
+        self.y2 = lngauss_diagcov(self.trueParams2, self.x2)
+    
+    def test_fit_eval_func1(self):
+        self.assertRaises(KeyError, interpolator.NonLinearLeastSquaresFit, \
+                          self.vFunc, self.initParams, method='bollie')
+        interp = interpolator.NonLinearLeastSquaresFit(self.vFunc, self.initParams, method='fmin_bfgs', disp=0)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.params, self.trueParams, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=5)
+    
+    def test_fit_eval_gauss(self):
+        interp2 = interpolator.NonLinearLeastSquaresFit(self.func2, self.initParams2, method='leastsq')
+        interp2.fit(self.x2, self.y2)
+        y2 = interp2(self.x2)
+        np.testing.assert_almost_equal(interp2.params, self.trueParams2, decimal=7)
+        np.testing.assert_almost_equal(y2, self.y2, decimal=5)
 
 class GaussianFit(unittest.TestCase):
 
     def setUp(self):
-        self.dim = 2
-        
-        def lngauss_diagcov(p, x):
-            xminmu = x - np.repeat(p[np.newaxis, 0:self.dim], x.shape[0], axis=0)
-            return p[2*self.dim] - 0.5 * np.dot(xminmu * xminmu, p[self.dim:2*self.dim])
-        
-        self.trueParams = np.array([3, -2, 10, 10, np.log(10)])
+        self.trueParams = np.array([3, -2, 10, 10, 4])
+        trueGauss = interpolator.GaussianFit(self.trueParams)
         self.x = np.random.randn(80, 2)
-        self.y = lngauss_diagcov(self.trueParams, self.x)
+        self.y = trueGauss(self.x)
 #        self.y += 0.001*np.random.randn(self.y.shape)
-        
         self.initialParams = np.array([0, 0, 1, 1, 0])
-        self.interp_diag = interpolator.NonLinearLeastSquaresFit(lngauss_diagcov, self.initialParams, method='leastsq')
-    
+
     def test_fit_eval_diagcov(self):
-        self.interp_diag.fit(self.x, self.y)
-        y = self.interp_diag(self.x)
-        np.testing.assert_almost_equal(self.interp_diag.params, self.trueParams, decimal=7)
+        interp = interpolator.GaussianFit(self.initialParams)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        np.testing.assert_almost_equal(interp.params, self.trueParams, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
