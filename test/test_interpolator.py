@@ -151,21 +151,22 @@ class NonLinearLeastSquaresFit(unittest.TestCase):
         interp2.fit(self.x2, self.y2)
         y2 = interp2(self.x2)
         np.testing.assert_almost_equal(interp2.params, self.trueParams2, decimal=7)
-        np.testing.assert_almost_equal(y2, self.y2, decimal=5)
+        np.testing.assert_almost_equal(y2, self.y2, decimal=7)
 
 class GaussianFit(unittest.TestCase):
 
     def setUp(self):
-        self.trueParams = np.array([3, -2, 10, 10, 4])
-        trueGauss = interpolator.GaussianFit(self.trueParams)
+        self.trueMean, self.trueVar, self.trueHeight = [3, -2], [10, 20], 4
+        trueGauss = interpolator.GaussianFit(self.trueMean, self.trueVar, self.trueHeight)
         self.x = np.random.randn(80, 2)
         self.y = trueGauss(self.x)
-#        self.y += 0.001*np.random.randn(self.y.shape)
-        self.initialParams = np.array([0, 0, 1, 1, 0])
+        self.initMean, self.initVar, self.initHeight = [0, 0], [1, 1], 1
 
     def test_fit_eval_diagcov(self):
-        interp = interpolator.GaussianFit(self.initialParams)
+        interp = interpolator.GaussianFit(self.initMean, self.initVar, self.initHeight)
         interp.fit(self.x, self.y)
         y = interp(self.x)
-        np.testing.assert_almost_equal(interp.params, self.trueParams, decimal=7)
+        np.testing.assert_almost_equal(interp.mean, self.trueMean, decimal=7)
+        np.testing.assert_almost_equal(interp.var, self.trueVar, decimal=7)
+        np.testing.assert_almost_equal(interp.height, self.trueHeight, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
