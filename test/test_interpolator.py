@@ -156,11 +156,14 @@ class NonLinearLeastSquaresFit(unittest.TestCase):
 class GaussianFit(unittest.TestCase):
 
     def setUp(self):
-        self.trueMean, self.trueVar, self.trueHeight = [3, -2], [10, 20], 4
+        # For a more challenging fit, move the true mean away from the origin, i.e. away from the region 
+        # being randomly sampled in self.x. Fitting a Gaussian to a segment that does not contain a clear peak 
+        # works fine if the fit is done to the log of the data, but fails in the linear domain.
+        self.trueMean, self.trueVar, self.trueHeight = [0, 0], [10, 20], 4
         trueGauss = interpolator.GaussianFit(self.trueMean, self.trueVar, self.trueHeight)
-        self.x = np.random.randn(80, 2)
+        self.x = 7*np.random.randn(80, 2)
         self.y = trueGauss(self.x)
-        self.initMean, self.initVar, self.initHeight = [0, 0], [1, 1], 1
+        self.initMean, self.initVar, self.initHeight = [3, -2], [1, 1], 1
 
     def test_fit_eval_diagcov(self):
         interp = interpolator.GaussianFit(self.initMean, self.initVar, self.initHeight)

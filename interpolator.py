@@ -442,9 +442,12 @@ class NonLinearLeastSquaresFit(Interpolator):
 
 ## Fit Gaussian curve to multi-dimensional data.
 # This fits a D-dimensional Gaussian curve (with diagonal covariance matrix) to x-y data. Don't confuse this
-# with fitting a Gaussian pdf to random data! Internally, the Gaussian function is fit to the log of the y data,
-# in order to simplify things. This means that the optimisation criterion is not quite least-squares in the original
-# x-y domain... The underlying optimiser is a modified Levenberg-Marquardt algorithm (scipy.optimize.leastsq).
+# with fitting a Gaussian pdf to random data! The underlying optimiser is a modified Levenberg-Marquardt algorithm 
+# (scipy.optimize.leastsq).
+#
+# One option that was considered is fitting the Gaussian internally to the log of the data. This is more robust
+# in some scenarios, but cannot handle negative data, which frequently occur in noisy problems. With log data, 
+# the optimisation criterion is not quite least-squares in the original x-y domain as well.
 class GaussianFit(Interpolator):
     ## Initialiser
     # @param self   The current object
@@ -453,11 +456,11 @@ class GaussianFit(Interpolator):
     # @param height Initial guess of height of Gaussian curve
     # pylint: disable-msg=W0612
     def __init__(self, mean, var, height):
-        # D-dimensional log Gaussian curve with diagonal covariance matrix, in vectorised form
-        def lngauss_diagcov(p, x):
+        # D-dimensional Gaussian curve with diagonal covariance matrix, in vectorised form
+        def gauss_diagcov(p, x):
             dim = (len(p) - 1) // 2
             xminmu = x - np.repeat(p[np.newaxis, 0:dim], x.shape[0], axis=0)
-            return p[2*dim] - 0.5 * np.dot(xminmu * xminmu, p[dim:2*dim])
+            return p[2*dim] * np.exp(-0.5 * np.dot(xminmu * xminmu, p[dim:2*dim]))
         # Jacobian of D-dimensional log Gaussian with diagonal covariance matrix, in vectorised form
         def lngauss_diagcov_jac(p, x):
             dim = (len(p) - 1) // 2
@@ -480,12 +483,12 @@ class GaussianFit(Interpolator):
         # Height of Gaussian curve, either initial guess or final optimal value
         self.height = height
         # Create parameter vector for optimisation
-        params = np.concatenate((self.mean, 1.0 / self.var, [np.log(self.height)]))
+        params = np.concatenate((self.mean, 1.0 / self.var, [self.height]))
         # Jacobian not working yet...
 #        self._interp = NonLinearLeastSquaresFit(lngauss_diagcov, params, lngauss_diagcov_jac, method='leastsq')
         ## @var _interp
         # Internal non-linear least squares fitter
-        self._interp = NonLinearLeastSquaresFit(lngauss_diagcov, params, method='leastsq')
+        self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params, method='leastsq')
     
     ## Fit a Gaussian curve to data.
     # The mean, variance and height can be obtained from the corresponding member variables after this is run.
@@ -493,19 +496,19 @@ class GaussianFit(Interpolator):
     # @param x    Sequence of D-dimensional input values as a numpy array, of shape (K, D)
     # @param y    Sequence of 1-D output values as a numpy array, of shape (K,)
     def fit(self, x, y):
-        self._interp.fit(x, np.log(y))
+        self._interp.fit(x, y)
         # Recreate Gaussian parameters
         dim = len(self.mean)
         self.mean = self._interp.params[0:dim]
         self.var = 1.0 / self._interp.params[dim:2*dim]
-        self.height = np.exp(self._interp.params[2*dim])
+        self.height = self._interp.params[2*dim]
     
     ## Evaluate function 'y = f(x)' on new data.
     # @param self The current object
     # @param x    Input to function as a numpy array, of shape (K, D)
     # @return     Output of function as a numpy array, of shape (K,)
     def __call__(self, x):
-        return np.exp(self._interp(x))
+        return self._interp(x)
     
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit
