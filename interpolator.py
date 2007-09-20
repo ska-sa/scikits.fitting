@@ -459,14 +459,14 @@ class GaussianFit(Interpolator):
         # D-dimensional Gaussian curve with diagonal covariance matrix, in vectorised form
         def gauss_diagcov(p, x):
             dim = (len(p) - 1) // 2
-            xminmu = x - np.repeat(p[np.newaxis, 0:dim], x.shape[0], axis=0)
+            xminmu = x - p[np.newaxis, 0:dim]
             return p[2*dim] * np.exp(-0.5 * np.dot(xminmu * xminmu, p[dim:2*dim]))
         # Jacobian of D-dimensional log Gaussian with diagonal covariance matrix, in vectorised form
         def lngauss_diagcov_jac(p, x):
             dim = (len(p) - 1) // 2
             K = x.shape[0]
-            xminmu = x - np.repeat(p[np.newaxis, 0:dim], K, axis=0)
-            dFdMu = xminmu * np.repeat(p[np.newaxis, dim:2*dim], K, axis=0)
+            xminmu = x - p[np.newaxis, 0:dim]
+            dFdMu = xminmu * p[np.newaxis, dim:2*dim]
             dFdSigma = -0.5 * xminmu * xminmu
             dFdHeight = np.ones((K, 1))
             return np.hstack((dFdMu, dFdSigma, dFdHeight))

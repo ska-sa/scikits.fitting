@@ -129,7 +129,7 @@ class NonLinearLeastSquaresFit(unittest.TestCase):
         self.y = self.vFunc(self.trueParams, self.x)
         # 2-D log Gaussian function
         def lngauss_diagcov(p, x):
-            xminmu = x - np.repeat(p[np.newaxis, 0:2], x.shape[0], axis=0)
+            xminmu = x - p[np.newaxis, 0:2]
             return p[4] - 0.5 * np.dot(xminmu * xminmu, p[2:4])
         self.func2 = lngauss_diagcov
         self.trueParams2 = np.array([3, -2, 10, 10, 4])
