@@ -107,10 +107,14 @@ def vectorizeFitFunc(func):
 # and resamples them to form r* according to the specified method. The final step re-fits the interpolator to the
 # pseudo-data (x, f(x) + r*), which yields a slightly different estimate of the function parameters every time the
 # method is called. The method is therefore non-deterministic.
+# Three resampling methods are supported:
+# - 'shuffle': permute the residuals (sample from the residuals without replacement)
+# - 'normal': replace the residuals with zero-mean Gaussian noise with the same variance
+# - 'bootstrap': sample from the existing residuals, with replacement
 # @param interp The interpolator object to randomise (not clobbered by this method)
 # @param x      Known input values as a numpy array (typically the data to which the function was originally fitted)
 # @param y      Known output values as a numpy array (typically the data to which the function was originally fitted)
-# @param method Resampling technique used to resample residuals ('shuffle')
+# @param method Resampling technique used to resample residuals ('shuffle', 'normal', or 'bootstrap')
 # @return       Randomised interpolator object
 def randomise(interp, x, y, method='shuffle'):
     # Make copy to prevent destruction of original interpolator
@@ -121,6 +125,10 @@ def randomise(interp, x, y, method='shuffle'):
     # Resample residuals
     if method == 'shuffle':
         random.shuffle(residuals.ravel())
+    elif method == 'normal':
+        residuals = residuals.std() * random.standard_normal(residuals.shape)
+    elif method == 'bootstrap':
+        residuals = residuals[random.randint(residuals.size, size=residuals.size)].reshape(residuals.shape)
     # Refit function on pseudo-data
     randomInterp.fit(x, fittedY + residuals)
     return randomInterp

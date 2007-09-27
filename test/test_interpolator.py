@@ -181,10 +181,12 @@ class RandomisedFit(unittest.TestCase):
         self.poly = np.array([1.0, -2.0, 1.0])
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
-        self.yNoisy = self.y + 0.01*random.standard_normal(self.y.shape)
+        self.numRuns = 100
+        self.yNoisy = self.y + 0.01*random.randn(self.numRuns, len(self.y))
     
     def test_randomised_polyfit(self):
         interp = interpolator.Polynomial1DFit(2)
+        # Perfect fit (no noise)
         interp.fit(self.x, self.y)
         randomInterp = interpolator.randomise(interp, self.x, self.y, 'unknown')
         y = randomInterp(self.x)
@@ -194,6 +196,22 @@ class RandomisedFit(unittest.TestCase):
         y = randomInterp(self.x)
         np.testing.assert_almost_equal(randomInterp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
-        interp.fit(self.x, self.yNoisy)
-        polyRuns = [interpolator.randomise(interp, self.x, self.yNoisy, 'shuffle').poly for n in range(200)]
-        np.testing.assert_almost_equal(np.array(polyRuns).mean(axis=0), self.poly, decimal=2)
+        # Fit polynomials to a set of noisy samples
+        noisyPoly = []
+        for noisyY in self.yNoisy:
+            interp.fit(self.x, noisyY)
+            noisyPoly.append(interp.poly)
+        noisyPoly = np.array(noisyPoly)
+        # Randomise polynomial fit to first noisy sample in various ways
+        shufflePoly = np.array([interpolator.randomise(interp, self.x, self.yNoisy[0], 'shuffle').poly \
+                                for n in range(self.numRuns)])
+        np.testing.assert_almost_equal(shufflePoly.mean(axis=0), noisyPoly[0], decimal=2)
+        np.testing.assert_almost_equal(shufflePoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
+        normalPoly = np.array([interpolator.randomise(interp, self.x, self.yNoisy[0], 'normal').poly \
+                               for n in range(self.numRuns)])
+        np.testing.assert_almost_equal(normalPoly.mean(axis=0), noisyPoly[0], decimal=2)
+        np.testing.assert_almost_equal(normalPoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
+        bootPoly = np.array([interpolator.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly \
+                             for n in range(self.numRuns)])
+        np.testing.assert_almost_equal(bootPoly.mean(axis=0), noisyPoly[0], decimal=2)
+        np.testing.assert_almost_equal(bootPoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
