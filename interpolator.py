@@ -8,9 +8,10 @@
 
 # pylint: disable-msg=C0103,R0903
 
-import scipy.optimize as optimize
-import scipy.sandbox.delaunay as delaunay
+import scipy.optimize as optimize           # NonLinearLeastSquaresFit
+import scipy.sandbox.delaunay as delaunay   # Delaunay2DFit
 import numpy as np
+import numpy.random as random               # randomise()
 import copy
 import logging
 
@@ -21,14 +22,14 @@ logger = logging.getLogger("xdmsbe.xdmsbelib.interpolator")
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Flatten array, but not necessarily all the way to a 1-D array.
-# This helper function is useful for broadcasting functions of arbitrary dimensionality along a given array. 
-# The array x is transposed and reshaped, so that the axes with indices listed in flattenAxes are collected 
-# either at the start or end of the array (based on the moveToStart flag). These axes are also flattened to 
-# a single axis, while preserving the total number of elements in the array. The reshaping and transposition 
-# usually results in a view of the original array, although a copy may result e.g. if discontiguous flattenAxes 
-# are chosen. The two extreme cases are flattenAxes = [] or None, which results in the original array with no 
+# This helper function is useful for broadcasting functions of arbitrary dimensionality along a given array.
+# The array x is transposed and reshaped, so that the axes with indices listed in flattenAxes are collected
+# either at the start or end of the array (based on the moveToStart flag). These axes are also flattened to
+# a single axis, while preserving the total number of elements in the array. The reshaping and transposition
+# usually results in a view of the original array, although a copy may result e.g. if discontiguous flattenAxes
+# are chosen. The two extreme cases are flattenAxes = [] or None, which results in the original array with no
 # flattening, and flattenAxes = range(len(x.shape)), which is equivalent to x.ravel() and therefore full flattening.
-# 
+#
 # Examples:
 # x.shape => (2,4,10)
 # semi_flatten(x, [], True).shape => (2,4,10) [no flattening, x returned unchanged]
@@ -98,6 +99,32 @@ def vectorizeFitFunc(func):
         return np.array([func(p, xx) for xx in x])
     return vecFunc
 
+## Randomise fitted function parameters by resampling residuals.
+# This allows estimation of the sampling distribution of the parameters of a fitted function, by repeatedly running
+# this method and collecting the statistics (e.g. variance) of the parameters of the resulting interpolator object.
+# Alternatively, it can form part of a bigger Monte Carlo run.
+# The method assumes that the interpolator has already been fit to data. It obtains the residuals 'r = y - f(x)',
+# and resamples them to form r* according to the specified method. The final step re-fits the interpolator to the
+# pseudo-data (x, f(x) + r*), which yields a slightly different estimate of the function parameters every time the
+# method is called. The method is therefore non-deterministic.
+# @param interp The interpolator object to randomise (not clobbered by this method)
+# @param x      Known input values as a numpy array (typically the data to which the function was originally fitted)
+# @param y      Known output values as a numpy array (typically the data to which the function was originally fitted)
+# @param method Resampling technique used to resample residuals ('shuffle')
+# @return       Randomised interpolator object
+def randomise(interp, x, y, method='shuffle'):
+    # Make copy to prevent destruction of original interpolator
+    randomInterp = copy.deepcopy(interp)
+    trueY = np.asarray(y)
+    fittedY = randomInterp(x)
+    residuals = trueY - fittedY
+    # Resample residuals
+    if method == 'shuffle':
+        random.shuffle(residuals.ravel())
+    # Refit function on pseudo-data
+    randomInterp.fit(x, fittedY + residuals)
+    return randomInterp
+
 #----------------------------------------------------------------------------------------------------------------------
 #--- INTERFACE :  Interpolator
 #----------------------------------------------------------------------------------------------------------------------
@@ -119,7 +146,6 @@ class Interpolator(object):
     # @param self The current object
     # @param x    Known input values as a numpy array
     # @param y    Known output values as a numpy array
-    # 
     def fit(self, x, y):
         raise NotImplementedError
     
@@ -234,7 +260,7 @@ class Independent1DFit(Interpolator):
         ## @var _interps
         # Array of interpolators, only set after fit()
         self._interps = None
-        
+    
     ## Fit a set of stored interpolators to one axis of 'y' matrix.
     # @param self The current object
     # @param x    Known input values as a 1-D numpy array or sequence
@@ -355,14 +381,14 @@ class Delaunay2DFit(Interpolator):
 
 ## Fit a generic function to data, based on non-linear least squares optimisation.
 # This fits a function of the form 'y = f(p,x)' to x-y data, where the parameter vector p is optimised via
-# least squares. It is assumed that the data presented to fit() consists of a sequence of x and y arrays, 
-# where each element in the sequence is of the right shape to serve as input or output to f(). The helper 
-# functions semi_flatten() and semi_unflatten() are useful to get the x and y arrays in this form. 
+# least squares. It is assumed that the data presented to fit() consists of a sequence of x and y arrays,
+# where each element in the sequence is of the right shape to serve as input or output to f(). The helper
+# functions semi_flatten() and semi_unflatten() are useful to get the x and y arrays in this form.
 #
-# The function f(p,x) should be able to operate on sequences of x arrays (i.e. should be vectorised). If it 
-# cannot, use the helper function vectorizeFitFunc() to wrap the function before passing it to this class. 
+# The function f(p,x) should be able to operate on sequences of x arrays (i.e. should be vectorised). If it
+# cannot, use the helper function vectorizeFitFunc() to wrap the function before passing it to this class.
 #
-# The Jacobian of the function (if available) should return an array of shape (normal y shape, N), where 
+# The Jacobian of the function (if available) should return an array of shape (normal y shape, N), where
 # N = len(p) is the number of function parameters. Each element of this array indicates the derivative of the
 # i'th output value with respect to the j'th parameter, evaluated at the given p and x. This function should
 # also be vectorised, similar to f.
@@ -398,7 +424,7 @@ class NonLinearLeastSquaresFit(Interpolator):
         # Extra keyword arguments to optimiser
         self._optimArgs = kwargs
         self._optimArgs['full_output'] = 1
-        
+    
     ## Fit function to data, by performing non-linear least squares optimisation.
     # This determines the optimal parameter vector p* so that the function 'y = f(p,x)' best fits the
     # observed x-y data, in a least-squares sense.
@@ -442,11 +468,11 @@ class NonLinearLeastSquaresFit(Interpolator):
 
 ## Fit Gaussian curve to multi-dimensional data.
 # This fits a D-dimensional Gaussian curve (with diagonal covariance matrix) to x-y data. Don't confuse this
-# with fitting a Gaussian pdf to random data! The underlying optimiser is a modified Levenberg-Marquardt algorithm 
+# with fitting a Gaussian pdf to random data! The underlying optimiser is a modified Levenberg-Marquardt algorithm
 # (scipy.optimize.leastsq).
 #
 # One option that was considered is fitting the Gaussian internally to the log of the data. This is more robust
-# in some scenarios, but cannot handle negative data, which frequently occur in noisy problems. With log data, 
+# in some scenarios, but cannot handle negative data, which frequently occur in noisy problems. With log data,
 # the optimisation criterion is not quite least-squares in the original x-y domain as well.
 class GaussianFit(Interpolator):
     ## Initialiser
@@ -509,7 +535,7 @@ class GaussianFit(Interpolator):
     # @return     Output of function as a numpy array, of shape (K,)
     def __call__(self, x):
         return self._interp(x)
-    
+
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit
 #----------------------------------------------------------------------------------------------------------------------
