@@ -128,7 +128,7 @@ def randomise(interp, x, y, method='shuffle'):
     elif method == 'normal':
         residuals = residuals.std() * random.standard_normal(residuals.shape)
     elif method == 'bootstrap':
-        residuals = residuals[random.randint(residuals.size, size=residuals.size)].reshape(residuals.shape)
+        residuals = residuals.ravel()[random.randint(residuals.size, size=residuals.size)].reshape(residuals.shape)
     # Refit function on pseudo-data
     randomInterp.fit(x, fittedY + residuals)
     return randomInterp
