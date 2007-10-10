@@ -1,4 +1,4 @@
-## @file interpolator.py
+## @file fitting.py
 #
 # Classes for encapsulating interpolator functions.
 #
@@ -15,7 +15,7 @@ import numpy.random as random               # randomise()
 import copy
 import logging
 
-logger = logging.getLogger("xdmsbe.xdmsbelib.interpolator")
+logger = logging.getLogger("xdmsbe.xdmsbelib.fitting")
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- FUNCTIONS
@@ -32,18 +32,18 @@ logger = logging.getLogger("xdmsbe.xdmsbelib.interpolator")
 #
 # Examples:
 # x.shape => (2,4,10)
-# semi_flatten(x, [], True).shape => (2,4,10) [no flattening, x returned unchanged]
-# semi_flatten(x, (1), True).shape => (4,2,10)
-# semi_flatten(x, (1), False).shape => (2,10,4)
-# semi_flatten(x, (0,2), True).shape => (20,4)
-# semi_flatten(x, (0,2), False).shape => (4,20)
-# semi_flatten(x, (0,1,2), True).shape => (80,) [same as x.ravel()]
+# squash(x, [], True).shape => (2,4,10) [no flattening, x returned unchanged]
+# squash(x, (1), True).shape => (4,2,10)
+# squash(x, (1), False).shape => (2,10,4)
+# squash(x, (0,2), True).shape => (20,4)
+# squash(x, (0,2), False).shape => (4,20)
+# squash(x, (0,1,2), True).shape => (80,) [same as x.ravel()]
 #
 # @param x           Numpy array, or sequence
 # @param flattenAxes List of axes along which x should be flattened
 # @param moveToStart Flag indicating whether flattened axis is moved to start or end of array [default=True]
 # @return            Semi-flattened version of x, as numpy array
-def semi_flatten(x, flattenAxes, moveToStart=True):
+def squash(x, flattenAxes, moveToStart=True):
     x = np.asarray(x)
     xShape = np.atleast_1d(np.asarray(x.shape))
     # Split list of axes into those that will be flattened and the rest, which are considered the main axes
@@ -63,13 +63,13 @@ def semi_flatten(x, flattenAxes, moveToStart=True):
     else:
         return x.transpose(mainAxes + flattenAxes).reshape(mainShape + flattenShape)
 
-## Restore an array that was reshaped by semi_flatten().
+## Restore an array that was reshaped by squash().
 # @param x             Numpy array, or sequence
 # @param flattenAxes   List of (original) axes along which x was flattened
 # @param originalShape Original shape of x, before flattening
 # @param moveFromStart Flag indicating whether flattened axes were moved to start or end of array [default=True]
 # @return              Restored version of x, as numpy array
-def semi_unflatten(x, flattenAxes, originalShape, moveFromStart=True):
+def unsquash(x, flattenAxes, originalShape, moveFromStart=True):
     x = np.asarray(x)
     originalShape = np.atleast_1d(np.asarray(originalShape))
     # Split list of axes into those that will be flattened and the rest, which are considered the main axes
@@ -134,12 +134,12 @@ def randomise(interp, x, y, method='shuffle'):
     return randomInterp
 
 #----------------------------------------------------------------------------------------------------------------------
-#--- INTERFACE :  Interpolator
+#--- INTERFACE :  GenericFit
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Interface object for interpolator functions.
 # This defines the interface for interpolator functions, which are derived from this class.
-class Interpolator(object):
+class GenericFit(object):
     
     ## Initialiser
     # The initialiser should be used to specify parameters of the interpolator function,
@@ -170,14 +170,14 @@ class Interpolator(object):
 
 ## Fits polynomial to 1-D data.
 # This uses numpy's polyfit and polyval.
-class Polynomial1DFit(Interpolator):
+class Polynomial1DFit(GenericFit):
     ## Initialiser.
     # @param self      The current object
     # @param maxDegree Maximum polynomial degree to use (reduced if there are not enough data points)
     # @param rcond     Relative condition number of fit
     #                  (smallest singular value that will be used to fit polynomial, has sensible default)
     def __init__(self, maxDegree, rcond=None):
-        Interpolator.__init__(self)
+        GenericFit.__init__(self)
         ## @var maxDegree
         # Polynomial degree
         self.maxDegree = maxDegree
@@ -218,14 +218,14 @@ class Polynomial1DFit(Interpolator):
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Interpolates the reciprocal of data.
-# This allows any Interpolator to fit the reciprocal of a data set, without having to invert the data
+# This allows any GenericFit object to fit the reciprocal of a data set, without having to invert the data
 # and the results explicitly.
-class ReciprocalFit(Interpolator):
+class ReciprocalFit(GenericFit):
     ## Initialiser
     # @param self The current object
-    # @param interp Interpolator object to use on the reciprocal of the data
+    # @param interp GenericFit object to use on the reciprocal of the data
     def __init__(self, interp):
-        Interpolator.__init__(self)
+        GenericFit.__init__(self)
         ## @var _interp
         # Internal interpolator object
         self._interp = copy.deepcopy(interp)
@@ -252,13 +252,13 @@ class ReciprocalFit(Interpolator):
 ## Interpolates an N-dimensional matrix along a given axis, using a set of independent 1-D interpolators.
 # This simplifies the simultaneous interpolation of a set of one-dimensional x-y relationships.
 # It assumes that x is 1-D, while y is N-D and to be independently interpolated along N-1 of its dimensions.
-class Independent1DFit(Interpolator):
+class Independent1DFit(GenericFit):
     ## Initialiser
     # @param self The current object
-    # @param interp Interpolator object to use on each 1-D segment
+    # @param interp GenericFit object to use on each 1-D segment
     # @param axis Axis of 'y' matrix which will vary with the independent 'x' variable
     def __init__(self, interp, axis):
-        Interpolator.__init__(self)
+        GenericFit.__init__(self)
         ## @var _interp
         # Internal interpolator object to be cloned into an array of interpolators
         self._interp = interp
@@ -332,13 +332,13 @@ class Independent1DFit(Interpolator):
 # The 2-D points are therefore stored as column vectors in x. The y data for this object is a 1-D array, which
 # represents the scalar 'z' value of the function defined on the plane (the symbols in quotation marks are the
 # names for these variables used in the delaunay documentation.)
-class Delaunay2DFit(Interpolator):
+class Delaunay2DFit(GenericFit):
     ## Initialiser
     # @param self       The current object
     # @param interpType String indicating type of interpolation ('linear' or 'nn': only 'nn' currently supported)
     # @param defaultVal Default value used when trying to extrapolate beyond convex hull of known data [default=NaN]
     def __init__(self, interpType='nn', defaultVal=np.nan):
-        Interpolator.__init__(self)
+        GenericFit.__init__(self)
         ## @var interpType
         # String indicating type of interpolation ('linear' or 'nn')
         self.interpType = interpType
@@ -391,7 +391,7 @@ class Delaunay2DFit(Interpolator):
 # This fits a function of the form 'y = f(p,x)' to x-y data, where the parameter vector p is optimised via
 # least squares. It is assumed that the data presented to fit() consists of a sequence of x and y arrays,
 # where each element in the sequence is of the right shape to serve as input or output to f(). The helper
-# functions semi_flatten() and semi_unflatten() are useful to get the x and y arrays in this form.
+# functions squash() and unsquash() are useful to get the x and y arrays in this form.
 #
 # The function f(p,x) should be able to operate on sequences of x arrays (i.e. should be vectorised). If it
 # cannot, use the helper function vectorizeFitFunc() to wrap the function before passing it to this class.
@@ -400,7 +400,7 @@ class Delaunay2DFit(Interpolator):
 # N = len(p) is the number of function parameters. Each element of this array indicates the derivative of the
 # i'th output value with respect to the j'th parameter, evaluated at the given p and x. This function should
 # also be vectorised, similar to f.
-class NonLinearLeastSquaresFit(Interpolator):
+class NonLinearLeastSquaresFit(GenericFit):
     ## Initialiser.
     # @param self         The current object
     # @param func         Generic function to be fit to x-y data, of the form 'y = f(p,x)' (should be vectorised)
@@ -411,7 +411,7 @@ class NonLinearLeastSquaresFit(Interpolator):
     # @param kwargs       Additional keyword arguments are passed to underlying optimiser
     # pylint: disable-msg=R0913
     def __init__(self, func, params0, funcJacobian=None, method='leastsq', **kwargs):
-        Interpolator.__init__(self)
+        GenericFit.__init__(self)
         ## @var func
         # Generic function object to be fit to data
         self.func = func
@@ -454,7 +454,7 @@ class NonLinearLeastSquaresFit(Interpolator):
             # Produce Jacobian of residual - array with shape (K, normal y shape, N)
             residualJac = - self.funcJacobian(p, x)
             # Squash every axis except last one together, to get (M,N) shape
-            return semi_flatten(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
+            return squash(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
         # Register Jacobian function if applicable
         if (self._optimizer.__name__ == 'leastsq') and (self.funcJacobian != None):
             self._optimArgs['Dfun'] = jacobian
@@ -482,7 +482,7 @@ class NonLinearLeastSquaresFit(Interpolator):
 # One option that was considered is fitting the Gaussian internally to the log of the data. This is more robust
 # in some scenarios, but cannot handle negative data, which frequently occur in noisy problems. With log data,
 # the optimisation criterion is not quite least-squares in the original x-y domain as well.
-class GaussianFit(Interpolator):
+class GaussianFit(GenericFit):
     ## Initialiser
     # @param self   The current object
     # @param mean   Initial guess of D-dimensional mean vector
@@ -504,7 +504,7 @@ class GaussianFit(Interpolator):
             dFdSigma = -0.5 * xminmu * xminmu
             dFdHeight = np.ones((K, 1))
             return np.hstack((dFdMu, dFdSigma, dFdHeight))
-        Interpolator.__init__(self)
+        GenericFit.__init__(self)
         ## @var mean
         # D-dimensional mean vector, either initial guess or final optimal value
         self.mean = np.atleast_1d(np.asarray(mean))
@@ -548,4 +548,4 @@ class GaussianFit(Interpolator):
 #--- CLASS :  SampledTemplateFit
 #----------------------------------------------------------------------------------------------------------------------
 
-#class SampledTemplateFit(Interpolator):
+#class SampledTemplateFit(GenericFit):
