@@ -10,6 +10,7 @@
 
 import scipy.optimize as optimize           # NonLinearLeastSquaresFit
 import scipy.sandbox.delaunay as delaunay   # Delaunay2DFit
+import scipy.interpolate as dierckx         # Spline1DFit, Spline2DFit
 import numpy as np
 import numpy.random as random               # randomise()
 import copy
@@ -428,10 +429,10 @@ class NonLinearLeastSquaresFit(GenericFit):
         except KeyError:
             raise KeyError, 'Optimisation method "' + method + '" unknown - should be one of:\n' \
                             + str(optimize.__dict__.iterkeys())
-        ## @var _optimArgs
+        ## @var _extraArgs
         # Extra keyword arguments to optimiser
-        self._optimArgs = kwargs
-        self._optimArgs['full_output'] = 1
+        self._extraArgs = kwargs
+        self._extraArgs['full_output'] = 1
     
     ## Fit function to data, by performing non-linear least squares optimisation.
     # This determines the optimal parameter vector p* so that the function 'y = f(p,x)' best fits the
@@ -457,10 +458,10 @@ class NonLinearLeastSquaresFit(GenericFit):
             return squash(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
         # Register Jacobian function if applicable
         if (self._optimizer.__name__ == 'leastsq') and (self.funcJacobian != None):
-            self._optimArgs['Dfun'] = jacobian
+            self._extraArgs['Dfun'] = jacobian
         # Do optimisation
         # pylint: disable-msg=W0142
-        self.params = self._optimizer(cost, self.params, **self._optimArgs)[0]
+        self.params = self._optimizer(cost, self.params, **self._extraArgs)[0]
     
     ## Evaluate fitted function on new data.
     # Evaluates the fitted function 'y = f(p*,x)' on new x data.
@@ -543,6 +544,126 @@ class GaussianFit(GenericFit):
     # @return     Output of function as a numpy array, of shape (K,)
     def __call__(self, x):
         return self._interp(x)
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  Spline1DFit
+#----------------------------------------------------------------------------------------------------------------------
+
+## Fits a B-spline to 1-D data.
+# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
+class Spline1DFit(GenericFit):
+    ## Initialiser.
+    # @param self   The current object
+    # @param degree Degree of spline (in range 1-5) [3, i.e. cubic B-spline]
+    # @param method Spline class (name of corresponding scipy.interpolate class) ['UnivariateSpline']
+    # @param kwargs Additional keyword arguments are passed to underlying spline class
+    def __init__(self, degree = 3, method = 'UnivariateSpline', **kwargs):
+        GenericFit.__init__(self)
+        ## @var degree
+        # Degree of spline
+        self.degree = degree
+        try:
+            ## @var _splineClass
+            # Class in scipy.interpolate to use for spline fitting
+            self._splineClass = dierckx.__dict__[method]
+        except KeyError:
+            raise KeyError, 'Spline class "' + method + '" unknown - should be one of: ' \
+                  + ' '.join([name for name in dierckx.__dict__.iterkeys() if name.find('UnivariateSpline') >= 0])
+        ## @var _extraArgs
+        # Extra keyword arguments to spline class
+        self._extraArgs = kwargs
+        ## @var _interp
+        # Interpolator function, only set after fit()
+        self._interp = None
+        
+    ## Fit spline to 1-D data.
+    # @param self The current object
+    # @param x    Known input values as a 1-D numpy array or sequence
+    # @param y    Known output values as a 1-D numpy array, or sequence
+    # pylint: disable-msg=W0142
+    def fit(self, x, y):
+        x = np.atleast_1d(np.asarray(x))
+        y = np.atleast_1d(np.asarray(y))
+        # Ensure that x is in strictly ascending order
+        if np.any(np.diff(x) < 0):
+            sortInd = x.argsort()
+            x = x[sortInd]
+            y = y[sortInd]
+        self._interp = self._splineClass(x, y, k = self.degree, **self._extraArgs)
+    
+    ## Evaluate spline on new data.
+    # @param self The current object
+    # @param x    Input to function as a 1-D numpy array, or sequence
+    # @return     Output of function as a 1-D numpy array
+    def __call__(self, x):
+        x = np.atleast_1d(np.asarray(x))
+        if self._interp == None:
+            raise AttributeError, "Spline not fitted to data yet - first call 'fit'."
+        return self._interp(x)
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  Spline2DFit
+#----------------------------------------------------------------------------------------------------------------------
+
+## Fits a B-spline to 2-D data.
+# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
+class Spline2DFit(GenericFit):
+    ## Initialiser.
+    # @param self   The current object
+    # @param degree Degree (1-5) of spline in x and y directions [(3, 3), i.e. bicubic B-spline]
+    # @param method Spline class (name of corresponding scipy.interpolate class) ['SmoothBivariateSpline']
+    # @param kwargs Additional keyword arguments are passed to underlying spline class
+    def __init__(self, degree = (3, 3), method = 'SmoothBivariateSpline', **kwargs):
+        GenericFit.__init__(self)
+        ## @var degree
+        # Degree of spline as a sequence of 2 elements, one for x and one for y direction
+        self.degree = degree
+        try:
+            ## @var _splineClass
+            # Class in scipy.interpolate to use for spline fitting
+            self._splineClass = dierckx.__dict__[method]
+        except KeyError:
+            raise KeyError, 'Spline class "' + method + r'" unknown - should be one of: ' \
+                  + ' '.join([name for name in dierckx.__dict__.iterkeys() if name.find('BivariateSpline') >= 0])
+        ## @var _extraArgs
+        # Extra keyword arguments to spline class
+        self._extraArgs = kwargs
+        ## @var _interp
+        # Interpolator function, only set after fit()
+        self._interp = None
+
+    ## Fit spline to 2-D data.
+    # The minimum number of data points is N = (xdegree+1)*(ydegree+1).
+    # @param self The current object
+    # @param x    Known input values as a 2-D numpy array, or sequence (of shape (2,N))
+    # @param y    Known output values as a 1-D numpy array, or sequence (of shape (N))
+    # pylint: disable-msg=W0142
+    def fit(self, x, y):
+        # Check dimensions of known data
+        x = np.atleast_2d(np.asarray(x))
+        y = np.atleast_1d(np.asarray(y))
+        if (len(x.shape) != 2) or (x.shape[0] != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
+            raise ValueError, "Spline interpolator requires input data with shape (2,N) and output data with " \
+                              " shape (N), got " + str(x.shape) + " and " + str(y.shape) + " instead."
+        if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
+            raise ValueError, "Not enough data points for spline fit: requires at least " + \
+                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
+        self._interp = self._splineClass(x[0], x[1], y, kx = self.degree[0], ky = self.degree[1], **self._extraArgs)
+
+    ## Evaluate spline on new data.
+    # @param self The current object
+    # @param x    Input to function as a 2-D numpy array, or sequence (of shape (2,N))
+    # @return     Output of function as a 1-D numpy array (of shape (N))
+    def __call__(self, x):
+        # Check dimensions
+        x = np.atleast_2d(np.asarray(x))
+        if (len(x.shape) != 2) or (x.shape[0] != 2):
+            raise ValueError, "Spline interpolator requires input data with shape (2,N), got " + \
+                              str(x.shape) + " instead."
+        if self._interp == None:
+            raise AttributeError, "Spline not fitted to data yet - first call 'fit'."
+        # Loop over individual data points, as underlying bispev routine expects regular grid in x
+        return np.array([self._interp(x[0, n], x[1, n]) for n in xrange(x.shape[1])]).squeeze()
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit

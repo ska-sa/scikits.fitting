@@ -1,13 +1,13 @@
-## @file test_interpolator.py
+## @file test_fitting.py
 #
-# Unit tests for interpolator functions.
+# Unit tests for fitting functions.
 #
 # copyright (c) 2007 SKA/KAT. All rights reserved.
 # @author Ludwig Schwardt <ludwig@ska.ac.za>
 # @date 2007-09-04
 
 import unittest
-import xdmsbe.xdmsbelib.interpolator as interpolator
+import xdmsbe.xdmsbelib.fitting as fitting
 import numpy as np
 import numpy.random as random
 
@@ -19,7 +19,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         self.y = np.polyval(self.poly, self.x)
     
     def test_fit_eval(self):
-        interp = interpolator.Polynomial1DFit(2)
+        interp = fitting.Polynomial1DFit(2)
         self.assertRaises(AttributeError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -28,7 +28,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=10)
     
     def test_reduce_degree(self):
-        interp = interpolator.Polynomial1DFit(2)
+        interp = fitting.Polynomial1DFit(2)
         interp.fit([1.0],[1.0])
         np.testing.assert_almost_equal(interp.poly, [1.0], decimal=10)
 
@@ -40,7 +40,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         self.y = 1.0 / np.polyval(self.poly, self.x)
     
     def test_fit_eval(self):
-        interp = interpolator.ReciprocalFit(interpolator.Polynomial1DFit(2))
+        interp = fitting.ReciprocalFit(fitting.Polynomial1DFit(2))
         self.assertRaises(AttributeError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -48,7 +48,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(interp._interp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
-class Independent1DFit(unittest.TestCase):
+class Independent1DFitTestCases(unittest.TestCase):
     
     def setUp(self):
         self.poly1 = np.array([1.0, -2.0, 20.0])
@@ -66,7 +66,7 @@ class Independent1DFit(unittest.TestCase):
         self.y[1,:,2] = np.polyval(self.poly2, self.x)
     
     def test_fit_eval(self):
-        interp = interpolator.Independent1DFit(interpolator.Polynomial1DFit(2), self.axis)
+        interp = fitting.Independent1DFit(fitting.Polynomial1DFit(2), self.axis)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.x, self.yTooLowDim)
         self.assertRaises(ValueError, interp.fit, self.x, self.yWrongSize)
@@ -82,7 +82,7 @@ class Independent1DFit(unittest.TestCase):
         np.testing.assert_almost_equal(interp._interps[1,2].poly, self.poly2, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
-class Delaunay2DFit(unittest.TestCase):
+class Delaunay2DFitTestCases(unittest.TestCase):
     
     def setUp(self):
         # Square diamond shape
@@ -95,7 +95,7 @@ class Delaunay2DFit(unittest.TestCase):
         self.outsidey = np.array([self.defaultVal])
     
     def test_fit_eval_linear(self):
-        interp = interpolator.Delaunay2DFit('linear', defaultVal=self.defaultVal)
+        interp = fitting.Delaunay2DFit('linear', defaultVal=self.defaultVal)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
@@ -107,7 +107,7 @@ class Delaunay2DFit(unittest.TestCase):
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
     
     def test_fit_eval_nn(self):
-        interp = interpolator.Delaunay2DFit('nn', defaultVal=self.defaultVal)
+        interp = fitting.Delaunay2DFit('nn', defaultVal=self.defaultVal)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
@@ -118,12 +118,12 @@ class Delaunay2DFit(unittest.TestCase):
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
-class NonLinearLeastSquaresFit(unittest.TestCase):
+class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
     
     def setUp(self):
         # Quadratic function centred at p
         func = lambda p, x: ((x - p)**2).sum()
-        self.vFunc = interpolator.vectorizeFitFunc(func)
+        self.vFunc = fitting.vectorizeFitFunc(func)
         self.trueParams = np.array([1, -4])
         self.initParams = np.array([0, 0])
         self.x = 4.0*np.random.randn(20, 2)
@@ -139,35 +139,35 @@ class NonLinearLeastSquaresFit(unittest.TestCase):
         self.y2 = lngauss_diagcov(self.trueParams2, self.x2)
     
     def test_fit_eval_func1(self):
-        self.assertRaises(KeyError, interpolator.NonLinearLeastSquaresFit, \
+        self.assertRaises(KeyError, fitting.NonLinearLeastSquaresFit, \
                           self.vFunc, self.initParams, method='bollie')
-        interp = interpolator.NonLinearLeastSquaresFit(self.vFunc, self.initParams, method='fmin_bfgs', disp=0)
+        interp = fitting.NonLinearLeastSquaresFit(self.vFunc, self.initParams, method='fmin_bfgs', disp=0)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.params, self.trueParams, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=5)
     
     def test_fit_eval_gauss(self):
-        interp2 = interpolator.NonLinearLeastSquaresFit(self.func2, self.initParams2, method='leastsq')
+        interp2 = fitting.NonLinearLeastSquaresFit(self.func2, self.initParams2, method='leastsq')
         interp2.fit(self.x2, self.y2)
         y2 = interp2(self.x2)
         np.testing.assert_almost_equal(interp2.params, self.trueParams2, decimal=10)
         np.testing.assert_almost_equal(y2, self.y2, decimal=10)
 
-class GaussianFit(unittest.TestCase):
+class GaussianFitTestCases(unittest.TestCase):
     
     def setUp(self):
         # For a more challenging fit, move the true mean away from the origin, i.e. away from the region
         # being randomly sampled in self.x. Fitting a Gaussian to a segment that does not contain a clear peak
         # works fine if the fit is done to the log of the data, but fails in the linear domain.
         self.trueMean, self.trueVar, self.trueHeight = [0, 0], [10, 20], 4
-        trueGauss = interpolator.GaussianFit(self.trueMean, self.trueVar, self.trueHeight)
+        trueGauss = fitting.GaussianFit(self.trueMean, self.trueVar, self.trueHeight)
         self.x = 7*np.random.randn(80, 2)
         self.y = trueGauss(self.x)
         self.initMean, self.initVar, self.initHeight = [3, -2], [1, 1], 1
     
     def test_fit_eval_diagcov(self):
-        interp = interpolator.GaussianFit(self.initMean, self.initVar, self.initHeight)
+        interp = fitting.GaussianFit(self.initMean, self.initVar, self.initHeight)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.mean, self.trueMean, decimal=7)
@@ -175,7 +175,48 @@ class GaussianFit(unittest.TestCase):
         np.testing.assert_almost_equal(interp.height, self.trueHeight, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
 
-class RandomisedFit(unittest.TestCase):
+class Spline1DFitTestCases(unittest.TestCase):
+    
+    def setUp(self):
+        # Training data is randomly sampled parabola
+        self.poly = np.array([1.0, -2.0, 1.0])
+        self.x = np.random.randn(40)
+        self.y = np.polyval(self.poly, self.x)
+        # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
+        self.testx = 0.2*np.random.randn(40)
+        self.testy = np.polyval(self.poly, self.testx)
+    
+    def test_fit_eval(self):
+        interp = fitting.Spline1DFit(3)
+        self.assertRaises(AttributeError, interp, self.x)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        np.testing.assert_almost_equal(y, self.y, decimal=10)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=10)
+
+class Spline2DFitTestCases(unittest.TestCase):
+    
+    def setUp(self):
+        # Training data is randomly sampled parabola
+        poly = np.array([1.0, 2.0, 1.0])
+        self.x = np.random.randn(2, 100)
+        self.y = poly[0]*self.x[0]**2 + poly[1]*self.x[0]*self.x[1] + poly[2]*self.x[1]**2
+        # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
+        self.testx = 0.2*np.random.randn(2, 100)
+        self.testy = poly[0]*self.testx[0]**2 + poly[1]*self.testx[0]*self.testx[1] + poly[2]*self.testx[1]**2
+    
+    def test_fit_eval(self):
+        interp = fitting.Spline2DFit((3, 3))
+        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        np.testing.assert_almost_equal(y, self.y, decimal=10)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=10)
+
+class RandomisedFitTestCases(unittest.TestCase):
     
     def setUp(self):
         self.poly = np.array([1.0, -2.0, 1.0])
@@ -185,14 +226,14 @@ class RandomisedFit(unittest.TestCase):
         self.yNoisy = self.y + 0.01*random.randn(self.numRuns, len(self.y))
     
     def test_randomised_polyfit(self):
-        interp = interpolator.Polynomial1DFit(2)
+        interp = fitting.Polynomial1DFit(2)
         # Perfect fit (no noise)
         interp.fit(self.x, self.y)
-        randomInterp = interpolator.randomise(interp, self.x, self.y, 'unknown')
+        randomInterp = fitting.randomise(interp, self.x, self.y, 'unknown')
         y = randomInterp(self.x)
         np.testing.assert_almost_equal(randomInterp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
-        randomInterp = interpolator.randomise(interp, self.x, self.y, 'shuffle')
+        randomInterp = fitting.randomise(interp, self.x, self.y, 'shuffle')
         y = randomInterp(self.x)
         np.testing.assert_almost_equal(randomInterp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
@@ -203,15 +244,15 @@ class RandomisedFit(unittest.TestCase):
             noisyPoly.append(interp.poly)
         noisyPoly = np.array(noisyPoly)
         # Randomise polynomial fit to first noisy sample in various ways
-        shufflePoly = np.array([interpolator.randomise(interp, self.x, self.yNoisy[0], 'shuffle').poly \
+        shufflePoly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'shuffle').poly \
                                 for n in range(self.numRuns)])
         np.testing.assert_almost_equal(shufflePoly.mean(axis=0), noisyPoly[0], decimal=2)
         np.testing.assert_almost_equal(shufflePoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
-        normalPoly = np.array([interpolator.randomise(interp, self.x, self.yNoisy[0], 'normal').poly \
+        normalPoly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'normal').poly \
                                for n in range(self.numRuns)])
         np.testing.assert_almost_equal(normalPoly.mean(axis=0), noisyPoly[0], decimal=2)
         np.testing.assert_almost_equal(normalPoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
-        bootPoly = np.array([interpolator.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly \
+        bootPoly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly \
                              for n in range(self.numRuns)])
         np.testing.assert_almost_equal(bootPoly.mean(axis=0), noisyPoly[0], decimal=2)
         np.testing.assert_almost_equal(bootPoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
