@@ -575,15 +575,20 @@ class Spline1DFit(GenericFit):
         ## @var _interp
         # Interpolator function, only set after fit()
         self._interp = None
-        
+    
     ## Fit spline to 1-D data.
+    # The minimum number of data points is N = degree + 1.
     # @param self The current object
     # @param x    Known input values as a 1-D numpy array or sequence
     # @param y    Known output values as a 1-D numpy array, or sequence
     # pylint: disable-msg=W0142
     def fit(self, x, y):
+        # Check dimensions of known data
         x = np.atleast_1d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
+        if y.size < self.degree + 1:
+            raise ValueError, "Not enough data points for spline fit: requires at least " + \
+                              str(self.degree + 1) + ", only got " + str(y.size)
         # Ensure that x is in strictly ascending order
         if np.any(np.diff(x) < 0):
             sortInd = x.argsort()
@@ -631,9 +636,9 @@ class Spline2DFit(GenericFit):
         ## @var _interp
         # Interpolator function, only set after fit()
         self._interp = None
-
+    
     ## Fit spline to 2-D data.
-    # The minimum number of data points is N = (xdegree+1)*(ydegree+1).
+    # The minimum number of data points is N = (degree[0]+1)*(degree[1]+1).
     # @param self The current object
     # @param x    Known input values as a 2-D numpy array, or sequence (of shape (2,N))
     # @param y    Known output values as a 1-D numpy array, or sequence (of shape (N))
@@ -649,7 +654,7 @@ class Spline2DFit(GenericFit):
             raise ValueError, "Not enough data points for spline fit: requires at least " + \
                               str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
         self._interp = self._splineClass(x[0], x[1], y, kx = self.degree[0], ky = self.degree[1], **self._extraArgs)
-
+    
     ## Evaluate spline on new data.
     # @param self The current object
     # @param x    Input to function as a 2-D numpy array, or sequence (of shape (2,N))
