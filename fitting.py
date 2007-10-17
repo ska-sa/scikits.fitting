@@ -427,8 +427,8 @@ class NonLinearLeastSquaresFit(GenericFit):
             # Optimiser method from scipy.optimize to use
             self._optimizer = optimize.__dict__[method]
         except KeyError:
-            raise KeyError, 'Optimisation method "' + method + '" unknown - should be one of:\n' \
-                            + str(optimize.__dict__.iterkeys())
+            raise KeyError, 'Optimisation method "' + method + '" unknown - should be one of: ' \
+                            'anneal fmin fmin_bfgs fmin_cg fmin_l_bfgs_b fmin_powell fmin_tnc leastsq'
         ## @var _extraArgs
         # Extra keyword arguments to optimiser
         self._extraArgs = kwargs
@@ -457,8 +457,11 @@ class NonLinearLeastSquaresFit(GenericFit):
             # Squash every axis except last one together, to get (M,N) shape
             return squash(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
         # Register Jacobian function if applicable
-        if (self._optimizer.__name__ == 'leastsq') and (self.funcJacobian != None):
-            self._extraArgs['Dfun'] = jacobian
+        if self.funcJacobian != None:
+            if self._optimizer.__name__ == 'leastsq':
+                self._extraArgs['Dfun'] = jacobian
+            else:
+                self._extraArgs['fprime'] = jacobian
         # Do optimisation
         # pylint: disable-msg=W0142
         self.params = self._optimizer(cost, self.params, **self._extraArgs)[0]
