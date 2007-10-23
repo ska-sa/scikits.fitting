@@ -450,14 +450,14 @@ class NonLinearLeastSquaresFit(GenericFit):
                 return residuals.ravel()
             else:
                 return (residuals**2).sum()
-        # Jacobian (M,N) matrix of function at given p and x values (derivatives along rows)
-        def jacobian(p):
-            # Produce Jacobian of residual - array with shape (K, normal y shape, N)
-            residualJac = - self.funcJacobian(p, x)
-            # Squash every axis except last one together, to get (M,N) shape
-            return squash(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
         # Register Jacobian function if applicable
         if self.funcJacobian != None:
+            # Jacobian (M,N) matrix of function at given p and x values (derivatives along rows)
+            def jacobian(p):
+                # Produce Jacobian of residual - array with shape (K, normal y shape, N)
+                residualJac = - self.funcJacobian(p, x)
+                # Squash every axis except last one together, to get (M,N) shape
+                return squash(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
             if self._optimizer.__name__ == 'leastsq':
                 self._extraArgs['Dfun'] = jacobian
             else:
