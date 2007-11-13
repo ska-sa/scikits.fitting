@@ -332,7 +332,8 @@ class Independent1DFit(GenericFit):
 # The x data for this object should have two rows, containing the 'x' and 'y' coordinates of points in a plane.
 # The 2-D points are therefore stored as column vectors in x. The y data for this object is a 1-D array, which
 # represents the scalar 'z' value of the function defined on the plane (the symbols in quotation marks are the
-# names for these variables used in the delaunay documentation.)
+# names for these variables used in the delaunay documentation.) The 2-D x coordinates do not have to lie on a 
+# regular grid, and can be in any order.
 class Delaunay2DFit(GenericFit):
     ## Initialiser
     # @param self       The current object
@@ -352,6 +353,7 @@ class Delaunay2DFit(GenericFit):
     
     ## Fit function 'y = f(x)' to data.
     # This fits a scalar function defined on 2-D data to the provided x-y pairs.
+    # The 2-D x coordinates do not have to lie on a regular grid, and can be in any order.
     # @param self The current object
     # @param x    Known input values as a 2-D numpy array, or sequence (of shape (2,N))
     # @param y    Known output values as a 1-D numpy array, or sequence (of shape (N))
@@ -615,6 +617,7 @@ class Spline1DFit(GenericFit):
 
 ## Fits a B-spline to 2-D data.
 # This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
+# The 2-D x coordinates do not have to lie on a regular grid, and can be in any order.
 class Spline2DFit(GenericFit):
     ## Initialiser.
     # @param self   The current object
@@ -642,6 +645,7 @@ class Spline2DFit(GenericFit):
     
     ## Fit spline to 2-D data.
     # The minimum number of data points is N = (degree[0]+1)*(degree[1]+1).
+    # The 2-D x coordinates do not have to lie on a regular grid, and can be in any order.
     # @param self The current object
     # @param x    Known input values as a 2-D numpy array, or sequence (of shape (2,N))
     # @param y    Known output values as a 1-D numpy array, or sequence (of shape (N))
