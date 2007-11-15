@@ -333,20 +333,26 @@ class Independent1DFit(GenericFit):
 # The 2-D points are therefore stored as column vectors in x. The y data for this object is a 1-D array, which
 # represents the scalar 'z' value of the function defined on the plane (the symbols in quotation marks are the
 # names for these variables used in the delaunay documentation.) The 2-D x coordinates do not have to lie on a 
-# regular grid, and can be in any order.
+# regular grid, and can be in any order. Jittering a regular grid seems to be troublesome, though...
 class Delaunay2DFit(GenericFit):
     ## Initialiser
     # @param self       The current object
     # @param interpType String indicating type of interpolation ('linear' or 'nn': only 'nn' currently supported)
     # @param defaultVal Default value used when trying to extrapolate beyond convex hull of known data [default=NaN]
-    def __init__(self, interpType='nn', defaultVal=np.nan):
+    # @param jitter     True to add small amount of jitter to x to make degenerate triangulation unlikely [False]
+    def __init__(self, interpType='nn', defaultVal=np.nan, jitter=False):
         GenericFit.__init__(self)
+        if interpType != 'nn':
+            raise TypeError, "Only 'nn' interpolator currently supports unstructured data not on a regular grid..."
         ## @var interpType
         # String indicating type of interpolation ('linear' or 'nn')
         self.interpType = interpType
         ## @var defaultVal
         # Default value used when trying to extrapolate beyond convex hull of known data
         self.defaultVal = defaultVal
+        ## @var jitter
+        # True if small amount of jitter is added to x to make degenerate triangles unlikely during triangulation
+        self.jitter = jitter
         ## @var _interp
         # Interpolator function, only set after fit()
         self._interp = None
@@ -364,11 +370,10 @@ class Delaunay2DFit(GenericFit):
         if (len(x.shape) != 2) or (x.shape[0] != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
             raise ValueError, "Delaunay interpolator requires input data with shape (2,N) and output data with " \
                               " shape (N), got " + str(x.shape) + " and " + str(y.shape) + " instead."
+        if self.jitter:
+            x = x + 0.00001 * x.std(axis=1)[:, np.newaxis] * np.random.standard_normal(x.shape)
         tri = delaunay.Triangulation(x[0], x[1])
-        if self.interpType == 'linear':
-            # Use 'nn' throughout until linear interpolation works in scipy
-            self._interp = tri.nn_interpolator(y, default_value=self.defaultVal)
-        else:
+        if self.interpType == 'nn':
             self._interp = tri.nn_interpolator(y, default_value=self.defaultVal)
     
     ## Evaluate function 'y = f(x)' on new data.

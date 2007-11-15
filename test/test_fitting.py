@@ -94,18 +94,6 @@ class Delaunay2DFitTestCases(unittest.TestCase):
         self.outsidex = np.array([[10],[10]])
         self.outsidey = np.array([self.defaultVal])
     
-    def test_fit_eval_linear(self):
-        interp = fitting.Delaunay2DFit('linear', defaultVal=self.defaultVal)
-        self.assertRaises(AttributeError, interp, self.x)
-        self.assertRaises(ValueError, interp.fit, self.y, self.y)
-        interp.fit(self.x, self.y)
-        y = interp(self.x)
-        testy = interp(self.testx)
-        outsidey = interp(self.outsidex)
-        np.testing.assert_almost_equal(y, self.y, decimal=10)
-        np.testing.assert_almost_equal(testy, self.testy, decimal=10)
-        np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
-    
     def test_fit_eval_nn(self):
         interp = fitting.Delaunay2DFit('nn', defaultVal=self.defaultVal)
         self.assertRaises(AttributeError, interp, self.x)
