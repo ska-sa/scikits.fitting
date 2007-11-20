@@ -9,8 +9,8 @@
 # pylint: disable-msg=C0103,R0903
 
 import scipy.optimize as optimize           # NonLinearLeastSquaresFit
-import scipy.sandbox.delaunay as delaunay   # Delaunay2DFit
-import scipy.interpolate as dierckx         # Spline1DFit, Spline2DFit
+import scipy.sandbox.delaunay as delaunay   # Delaunay2DScatterFit, Delaunay2DGridFit
+import scipy.interpolate as dierckx         # Spline1DFit, Spline2DScatterFit, Spline2DGridFit
 import numpy as np
 import numpy.random as random               # randomise()
 import copy
