@@ -135,15 +135,18 @@ def randomise(interp, x, y, method='shuffle'):
     return randomInterp
 
 #----------------------------------------------------------------------------------------------------------------------
-#--- INTERFACE :  GenericFit
+#--- INTERFACE :  ScatterFit
 #----------------------------------------------------------------------------------------------------------------------
 
-## Interface object for interpolator functions.
-# This defines the interface for interpolator functions, which are derived from this class.
-class GenericFit(object):
+## Interface object for interpolator functions that operate on scattered data (not on a grid).
+# This defines the interface for interpolator functions that operate on unstructured scattered input data (i.e. not 
+# on a grid). The input data consists of a sequence of x coordinates and a sequence of corresponding y data, 
+# where the order of the x coordinates does not matter and their location can be arbitrary. The x coordinates can have 
+# an arbritrary dimension (although most classes are specialised for 1-D or 2-D data).
+class ScatterFit(object):
     
-    ## Initialiser
-    # The initialiser should be used to specify parameters of the interpolator function,
+    ## Initialiser.
+    # The initialiser should be used to specify parameters of the interpolator function, 
     # such as polynomial degree.
     # @param self The current object
     def __init__(self):
@@ -153,14 +156,48 @@ class GenericFit(object):
     # This function should reset any state associated with previous (x,y) data fits, and preserve
     # all state that was set by the initialiser.
     # @param self The current object
-    # @param x    Known input values as a numpy array
+    # @param x    Known input values as a numpy array (order does not matter)
     # @param y    Known output values as a numpy array
     def fit(self, x, y):
         raise NotImplementedError
     
     ## Evaluate function 'y = f(x)' on new data.
     # @param self The current object
-    # @param x    Input to function as a numpy array
+    # @param x    Input to function as a numpy array (order does not matter)
+    # @return     Output of function as a numpy array
+    def __call__(self, x):
+        raise NotImplementedError
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- INTERFACE :  GridFit
+#----------------------------------------------------------------------------------------------------------------------
+
+## Interface object for interpolator functions that operate on data on a grid.
+# This defines the interface for interpolator functions that operate on input data that lie on a grid. The input data 
+# consists of a sequence of x axis tick sequences and the corresponding array of y data. The shape of this array matches
+# the corresponding lengths of the axis tick sequences. The axis tick sequences are assumed to be in ascending order.
+# The x sequence can contain an arbitrary number of axes (although most classes are specialised for 1-D or 2-D data).
+class GridFit(object):
+
+    ## Initialiser.
+    # The initialiser should be used to specify parameters of the interpolator function, 
+    # such as polynomial degree.
+    # @param self The current object
+    def __init__(self):
+        pass
+
+    ## Fit function 'y = f(x)' to data.
+    # This function should reset any state associated with previous (x,y) data fits, and preserve
+    # all state that was set by the initialiser.
+    # @param self The current object
+    # @param x    Known axis tick values as a sequence of numpy arrays (each in ascending order)
+    # @param y    Known output values as a numpy array
+    def fit(self, x, y):
+        raise NotImplementedError
+
+    ## Evaluate function 'y = f(x)' on new data.
+    # @param self The current object
+    # @param x    Input to function as a sequence of numpy arrays (each in ascending order)
     # @return     Output of function as a numpy array
     def __call__(self, x):
         raise NotImplementedError
@@ -171,14 +208,14 @@ class GenericFit(object):
 
 ## Fits polynomial to 1-D data.
 # This uses numpy's polyfit and polyval.
-class Polynomial1DFit(GenericFit):
+class Polynomial1DFit(ScatterFit):
     ## Initialiser.
     # @param self      The current object
     # @param maxDegree Maximum polynomial degree to use (reduced if there are not enough data points)
     # @param rcond     Relative condition number of fit
     #                  (smallest singular value that will be used to fit polynomial, has sensible default)
     def __init__(self, maxDegree, rcond=None):
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         ## @var maxDegree
         # Polynomial degree
         self.maxDegree = maxDegree
@@ -219,14 +256,14 @@ class Polynomial1DFit(GenericFit):
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Interpolates the reciprocal of data.
-# This allows any GenericFit object to fit the reciprocal of a data set, without having to invert the data
+# This allows any ScatterFit object to fit the reciprocal of a data set, without having to invert the data
 # and the results explicitly.
-class ReciprocalFit(GenericFit):
+class ReciprocalFit(ScatterFit):
     ## Initialiser
     # @param self The current object
-    # @param interp GenericFit object to use on the reciprocal of the data
+    # @param interp ScatterFit object to use on the reciprocal of the data
     def __init__(self, interp):
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         ## @var _interp
         # Internal interpolator object
         self._interp = copy.deepcopy(interp)
@@ -253,13 +290,13 @@ class ReciprocalFit(GenericFit):
 ## Interpolates an N-dimensional matrix along a given axis, using a set of independent 1-D interpolators.
 # This simplifies the simultaneous interpolation of a set of one-dimensional x-y relationships.
 # It assumes that x is 1-D, while y is N-D and to be independently interpolated along N-1 of its dimensions.
-class Independent1DFit(GenericFit):
+class Independent1DFit(ScatterFit):
     ## Initialiser
     # @param self The current object
-    # @param interp GenericFit object to use on each 1-D segment
+    # @param interp ScatterFit object to use on each 1-D segment
     # @param axis Axis of 'y' matrix which will vary with the independent 'x' variable
     def __init__(self, interp, axis):
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         ## @var _interp
         # Internal interpolator object to be cloned into an array of interpolators
         self._interp = interp
@@ -325,23 +362,23 @@ class Independent1DFit(GenericFit):
         return y.transpose(newAxisOrder)
 
 #----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Delaunay2DFit
+#--- CLASS :  Delaunay2DScatterFit
 #----------------------------------------------------------------------------------------------------------------------
 
-## Interpolates a scalar function of 2-D data, based on Delaunay triangulation.
+## Interpolates a scalar function of 2-D data, based on Delaunay triangulation (scattered data version).
 # The x data for this object should have two rows, containing the 'x' and 'y' coordinates of points in a plane.
 # The 2-D points are therefore stored as column vectors in x. The y data for this object is a 1-D array, which
 # represents the scalar 'z' value of the function defined on the plane (the symbols in quotation marks are the
-# names for these variables used in the delaunay documentation.) The 2-D x coordinates do not have to lie on a 
+# names for these variables used in the delaunay documentation). The 2-D x coordinates do not have to lie on a 
 # regular grid, and can be in any order. Jittering a regular grid seems to be troublesome, though...
-class Delaunay2DFit(GenericFit):
+class Delaunay2DScatterFit(ScatterFit):
     ## Initialiser
     # @param self       The current object
-    # @param interpType String indicating type of interpolation ('linear' or 'nn': only 'nn' currently supported)
+    # @param interpType String indicating type of interpolation (only 'nn' currently supported) ['nn']
     # @param defaultVal Default value used when trying to extrapolate beyond convex hull of known data [default=NaN]
     # @param jitter     True to add small amount of jitter to x to make degenerate triangulation unlikely [False]
     def __init__(self, interpType='nn', defaultVal=np.nan, jitter=False):
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         if interpType != 'nn':
             raise TypeError, "Only 'nn' interpolator currently supports unstructured data not on a regular grid..."
         ## @var interpType
@@ -392,6 +429,84 @@ class Delaunay2DFit(GenericFit):
         return self._interp(x[0], x[1])
 
 #----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  Delaunay2DGridFit
+#----------------------------------------------------------------------------------------------------------------------
+
+## Interpolates a scalar function defined on a 2-D grid, based on Delaunay triangulation.
+# The x data sequence for this object should have two items: the 'x' and 'y' axis ticks (both in ascending order) 
+# defining a grid of points in a plane. The y data for this object is a 2-D array of shape (len(x[0]), len(x[1])), 
+# which represents the scalar 'z' value of the function defined on the grid (the symbols in quotation marks are the 
+# names for these variables used in the delaunay documentation). It is assumed that the 'x' and 'y' axis ticks are
+# uniformly spaced during evaluation, as this is a requirement of the underlying library. Even more restricting is 
+# the requirement that the first and last tick should coincide on both axes during fitting... Any points lying outside
+# the intersection of the 'x' and 'y' axis tick sets will be given default values during evaluation. The 'x' and 'y' 
+# axes may have a different number of ticks (although it is not recommended).
+class Delaunay2DGridFit(GridFit):
+    ## Initialiser
+    # @param self       The current object
+    # @param interpType String indicating type of interpolation ('linear' or 'nn') ['nn']
+    # @param defaultVal Default value used when trying to extrapolate beyond known grid [default=NaN]
+    def __init__(self, interpType='nn', defaultVal=np.nan):
+        GridFit.__init__(self)
+        ## @var interpType
+        # String indicating type of interpolation ('linear' or 'nn')
+        self.interpType = interpType
+        ## @var defaultVal
+        # Default value used when trying to extrapolate beyond known data grid
+        self.defaultVal = defaultVal
+        ## @var _interp
+        # Interpolator function, only set after fit()
+        self._interp = None
+    
+    ## Fit function 'y = f(x)' to data.
+    # This fits a scalar function defined on 2-D data to the provided grid. The first sequence in x defines
+    # the M 'x' axis ticks (in ascending order), while the second sequence in x defines the N 'y' axis ticks.
+    # The provided function output y contains the corresponding 'z' values on the grid, in an array of shape (M, N).
+    # The first and last values of x[0] and x[1] should match up, to minimise any unexpected results.
+    # @param self The current object
+    # @param x    Known input grid specified by sequence of 2 sequences of axis ticks (of lengths M and N)
+    # @param y    Known output values as a 2-D numpy array of shape (M, N)
+    def fit(self, x, y):
+        # Check dimensions of known data
+        x = [np.atleast_1d(np.asarray(ax)) for ax in x]
+        y = np.atleast_2d(np.asarray(y))
+        if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1) or (len(y.shape) != 2) or \
+           (y.shape[0] != len(x[0])) or (y.shape[1] != len(x[1])):
+            raise ValueError, "Delaunay interpolator requires input data with shape [(M,), (N,)] " \
+                              " and output data with shape (M, N), got " + str([ax.shape for ax in x]) + \
+                              " and " + str(y.shape) + " instead."
+        if (x[0][0] != x[1][0]) or (x[0][-1] != x[1][-1]):
+            print "WARNING: The first and last values of x[0] and x[1] do not match up, " + \
+                  "which may lead to unexpected results..."
+        # Create rectangular mesh, and triangulate
+        x1, x0 = np.meshgrid(x[1], x[0])
+        tri = delaunay.Triangulation(x0.ravel(), x1.ravel())
+        if self.interpType == 'nn':
+            self._interp = tri.nn_interpolator(y.ravel(), default_value=self.defaultVal)
+        elif self.interpType == 'linear':
+            self._interp = tri.linear_interpolator(y.ravel(), default_value=self.defaultVal)
+    
+    ## Evaluate function 'y = f(x)' on new data.
+    # Evaluates the fitted scalar function on 2-D grid provided in x. The first sequence in x defines
+    # the M 'x' axis ticks (in ascending order), while the second sequence in x defines the N 'y' axis ticks.
+    # The function returns the corresponding 'z' values on the grid, in an array of shape (M, N).
+    # It is assumed that the 'x' and 'y' axis ticks are uniformly spaced, as this is a requirement of the 
+    # underlying library. Only the first and last ticks, and the number of ticks, are therefore used
+    # to construct the grid, while the rest of the values are ignored...
+    # @param self The current object
+    # @param x    2-D input grid specified by sequence of 2 sequences of axis ticks (of lengths M and N)
+    # @return     Output of function as a 2-D numpy array of shape (M, N)
+    def __call__(self, x):
+        # Check dimensions
+        x = [np.atleast_1d(np.asarray(ax)) for ax in x]
+        if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1):
+            raise ValueError, "Delaunay interpolator requires input data with shape [(M,), (N,)], got " + \
+                              str([ax.shape for ax in x]) + " instead."
+        if self._interp == None:
+            raise AttributeError, "Interpolator function not fitted to data yet - first call 'fit'."
+        return self._interp[x[0][0]:x[0][-1]:len(x[0])*1j, x[1][0]:x[1][-1]:len(x[1])*1j]
+
+#----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  NonLinearLeastSquaresFit
 #----------------------------------------------------------------------------------------------------------------------
 
@@ -408,7 +523,7 @@ class Delaunay2DFit(GenericFit):
 # N = len(p) is the number of function parameters. Each element of this array indicates the derivative of the
 # i'th output value with respect to the j'th parameter, evaluated at the given p and x. This function should
 # also be vectorised, similar to f.
-class NonLinearLeastSquaresFit(GenericFit):
+class NonLinearLeastSquaresFit(ScatterFit):
     ## Initialiser.
     # @param self         The current object
     # @param func         Generic function to be fit to x-y data, of the form 'y = f(p,x)' (should be vectorised)
@@ -419,7 +534,7 @@ class NonLinearLeastSquaresFit(GenericFit):
     # @param kwargs       Additional keyword arguments are passed to underlying optimiser
     # pylint: disable-msg=R0913
     def __init__(self, func, params0, funcJacobian=None, method='leastsq', **kwargs):
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         ## @var func
         # Generic function object to be fit to data
         self.func = func
@@ -493,7 +608,7 @@ class NonLinearLeastSquaresFit(GenericFit):
 # One option that was considered is fitting the Gaussian internally to the log of the data. This is more robust
 # in some scenarios, but cannot handle negative data, which frequently occur in noisy problems. With log data,
 # the optimisation criterion is not quite least-squares in the original x-y domain as well.
-class GaussianFit(GenericFit):
+class GaussianFit(ScatterFit):
     ## Initialiser
     # @param self   The current object
     # @param mean   Initial guess of D-dimensional mean vector
@@ -515,7 +630,7 @@ class GaussianFit(GenericFit):
             dFdSigma = -0.5 * xminmu * xminmu
             dFdHeight = np.ones((K, 1))
             return np.hstack((dFdMu, dFdSigma, dFdHeight))
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         ## @var mean
         # D-dimensional mean vector, either initial guess or final optimal value
         self.mean = np.atleast_1d(np.asarray(mean))
@@ -561,14 +676,14 @@ class GaussianFit(GenericFit):
 
 ## Fits a B-spline to 1-D data.
 # This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
-class Spline1DFit(GenericFit):
+class Spline1DFit(ScatterFit):
     ## Initialiser.
     # @param self   The current object
     # @param degree Degree of spline (in range 1-5) [3, i.e. cubic B-spline]
     # @param method Spline class (name of corresponding scipy.interpolate class) ['UnivariateSpline']
     # @param kwargs Additional keyword arguments are passed to underlying spline class
     def __init__(self, degree = 3, method = 'UnivariateSpline', **kwargs):
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         ## @var degree
         # Degree of spline
         self.degree = degree
@@ -617,20 +732,20 @@ class Spline1DFit(GenericFit):
         return self._interp(x)
 
 #----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Spline2DFit
+#--- CLASS :  Spline2DScatterFit
 #----------------------------------------------------------------------------------------------------------------------
 
-## Fits a B-spline to 2-D data.
+## Fits a B-spline to scattered 2-D data.
 # This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
 # The 2-D x coordinates do not have to lie on a regular grid, and can be in any order.
-class Spline2DFit(GenericFit):
+class Spline2DScatterFit(ScatterFit):
     ## Initialiser.
     # @param self   The current object
     # @param degree Degree (1-5) of spline in x and y directions [(3, 3), i.e. bicubic B-spline]
     # @param method Spline class (name of corresponding scipy.interpolate class) ['SmoothBivariateSpline']
     # @param kwargs Additional keyword arguments are passed to underlying spline class
     def __init__(self, degree = (3, 3), method = 'SmoothBivariateSpline', **kwargs):
-        GenericFit.__init__(self)
+        ScatterFit.__init__(self)
         ## @var degree
         # Degree of spline as a sequence of 2 elements, one for x and one for y direction
         self.degree = degree
@@ -648,7 +763,7 @@ class Spline2DFit(GenericFit):
         # Interpolator function, only set after fit()
         self._interp = None
     
-    ## Fit spline to 2-D data.
+    ## Fit spline to 2-D scattered data in unstructured form.
     # The minimum number of data points is N = (degree[0]+1)*(degree[1]+1).
     # The 2-D x coordinates do not have to lie on a regular grid, and can be in any order.
     # @param self The current object
@@ -667,7 +782,7 @@ class Spline2DFit(GenericFit):
                               str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
         self._interp = self._splineClass(x[0], x[1], y, kx = self.degree[0], ky = self.degree[1], **self._extraArgs)
     
-    ## Evaluate spline on new data.
+    ## Evaluate spline on new scattered data.
     # @param self The current object
     # @param x    Input to function as a 2-D numpy array, or sequence (of shape (2,N))
     # @return     Output of function as a 1-D numpy array (of shape (N))
@@ -683,7 +798,80 @@ class Spline2DFit(GenericFit):
         return np.array([self._interp(x[0, n], x[1, n]) for n in xrange(x.shape[1])]).squeeze()
 
 #----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  Spline2DGridFit
+#----------------------------------------------------------------------------------------------------------------------
+
+## Fits a B-spline to 2-D data on a rectangular grid.
+# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
+# The 2-D x coordinates should lie on a rectangular grid.
+class Spline2DGridFit(GridFit):
+    ## Initialiser.
+    # @param self   The current object
+    # @param degree Degree (1-5) of spline in x and y directions [(3, 3), i.e. bicubic B-spline]
+    # @param method Spline class (name of corresponding scipy.interpolate class) ['RectBivariateSpline']
+    # @param kwargs Additional keyword arguments are passed to underlying spline class
+    def __init__(self, degree = (3, 3), method = 'RectBivariateSpline', **kwargs):
+        GridFit.__init__(self)
+        ## @var degree
+        # Degree of spline as a sequence of 2 elements, one for x and one for y direction
+        self.degree = degree
+        try:
+            ## @var _splineClass
+            # Class in scipy.interpolate to use for spline fitting
+            self._splineClass = dierckx.__dict__[method]
+        except KeyError:
+            raise KeyError, 'Spline class "' + method + r'" unknown - should be one of: ' \
+                  + ' '.join([name for name in dierckx.__dict__.iterkeys() if name.find('BivariateSpline') >= 0])
+        ## @var _extraArgs
+        # Extra keyword arguments to spline class
+        self._extraArgs = kwargs
+        ## @var _interp
+        # Interpolator function, only set after fit()
+        self._interp = None
+
+    ## Fit spline to 2-D data on a rectangular grid.
+    # This fits a scalar function defined on 2-D data to the provided grid. The first sequence in x defines
+    # the M 'x' axis ticks (in ascending order), while the second sequence in x defines the N 'y' axis ticks.
+    # The provided function output y contains the corresponding 'z' values on the grid, in an array of shape (M, N).
+    # The minimum number of data points is (degree[0]+1)*(degree[1]+1).
+    # @param self The current object
+    # @param x    Known input grid specified by sequence of 2 sequences of axis ticks (of lengths M and N)
+    # @param y    Known output values as a 2-D numpy array of shape (M, N)
+    # pylint: disable-msg=W0142
+    def fit(self, x, y):
+        # Check dimensions of known data
+        x = [np.atleast_1d(np.asarray(ax)) for ax in x]
+        y = np.atleast_2d(np.asarray(y))
+        if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1) or (len(y.shape) != 2) or \
+           (y.shape[0] != len(x[0])) or (y.shape[1] != len(x[1])):
+            raise ValueError, "Spline interpolator requires input data with shape [(M,), (N,)] " \
+                              " and output data with shape (M, N), got " + str([ax.shape for ax in x]) + \
+                              " and " + str(y.shape) + " instead."
+        if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
+            raise ValueError, "Not enough data points for spline fit: requires at least " + \
+                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
+        self._interp = self._splineClass(x[0], x[1], y, kx = self.degree[0], ky = self.degree[1], **self._extraArgs)
+
+    ## Evaluate spline on a new rectangular grid.
+    # Evaluates the fitted scalar function on 2-D grid provided in x. The first sequence in x defines
+    # the M 'x' axis ticks (in ascending order), while the second sequence in x defines the N 'y' axis ticks.
+    # The function returns the corresponding 'z' values on the grid, in an array of shape (M, N).
+    # @param self The current object
+    # @param x    2-D input grid specified by sequence of 2 sequences of axis ticks (of lengths M and N)
+    # @return     Output of function as a 2-D numpy array of shape (M, N)
+    def __call__(self, x):
+        # Check dimensions
+        x = [np.atleast_1d(np.asarray(ax)) for ax in x]
+        if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1):
+            raise ValueError, "Spline interpolator requires input data with shape [(M,), (N,)], got " + \
+                              str([ax.shape for ax in x]) + " instead."
+        if self._interp == None:
+            raise AttributeError, "Spline not fitted to data yet - first call 'fit'."
+        # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid
+        return self._interp(x[0], x[1])
+
+#----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit
 #----------------------------------------------------------------------------------------------------------------------
 
-#class SampledTemplateFit(GenericFit):
+#class SampledTemplateFit(ScatterFit):

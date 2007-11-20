@@ -82,7 +82,7 @@ class Independent1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(interp._interps[1,2].poly, self.poly2, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
-class Delaunay2DFitTestCases(unittest.TestCase):
+class Delaunay2DScatterFitTestCases(unittest.TestCase):
     
     def setUp(self):
         # Square diamond shape
@@ -90,12 +90,12 @@ class Delaunay2DFitTestCases(unittest.TestCase):
         self.y = np.array([1,1,1,1,1])
         self.testx = np.array([[-0.5,0,0.5,0], [0,-0.5,0.5,0]])
         self.testy = np.array([1,1,1,1])
-        self.defaultVal = 100
+        self.defaultVal = -100
         self.outsidex = np.array([[10],[10]])
         self.outsidey = np.array([self.defaultVal])
     
     def test_fit_eval_nn(self):
-        interp = fitting.Delaunay2DFit('nn', defaultVal=self.defaultVal)
+        interp = fitting.Delaunay2DScatterFit(defaultVal=self.defaultVal)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
@@ -104,6 +104,47 @@ class Delaunay2DFitTestCases(unittest.TestCase):
         outsidey = interp(self.outsidex)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
+        np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
+
+class Delaunay2DGridFitTestCases(unittest.TestCase):
+
+    def setUp(self):
+        # Training data is uniformly sampled parabola (make sure x and y ranges coincide)
+        poly = np.array([1.0, 2.0, 1.0])
+        self.x = [np.linspace(-3, 3, 30), np.linspace(-3, 3, 30)]
+        xx1, xx0 = np.meshgrid(self.x[1], self.x[0])
+        self.y = poly[0]*xx0*xx0 + poly[1]*xx0*xx1 + poly[2]*xx1*xx1
+        # Test data is uniform samples of same parabola, but ensure that samples do not fall outside training set
+        self.testx = [np.linspace(-1, 1, 8), np.linspace(-1, 1, 12)]
+        testx1, testx0 = np.meshgrid(self.testx[1], self.testx[0])
+        self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
+        self.defaultVal = -100.0
+        # For some reason doesn't work for a single point - requires at least a 2x2 grid
+        self.outsidex = [np.array([100, 200]), np.array([100, 200])]
+        self.outsidey = np.tile(self.defaultVal, (len(self.outsidex[0]), len(self.outsidex[1])))
+
+    def test_fit_eval_nn(self):
+        interp = fitting.Delaunay2DGridFit('nn', defaultVal=self.defaultVal)
+        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        np.testing.assert_almost_equal(y[5:-5, 5:-5], self.y[5:-5, 5:-5], decimal=10)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=1)
+        np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
+
+    def test_fit_eval_linear(self):
+        interp = fitting.Delaunay2DGridFit('linear', defaultVal=self.defaultVal)
+        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        np.testing.assert_almost_equal(y[5:-5, 5:-5], self.y[5:-5, 5:-5], decimal=10)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=1)
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
 class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
@@ -183,7 +224,7 @@ class Spline1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=10)
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
 
-class Spline2DFitTestCases(unittest.TestCase):
+class Spline2DScatterFitTestCases(unittest.TestCase):
     
     def setUp(self):
         # Training data is randomly sampled parabola
@@ -195,7 +236,30 @@ class Spline2DFitTestCases(unittest.TestCase):
         self.testy = poly[0]*self.testx[0]**2 + poly[1]*self.testx[0]*self.testx[1] + poly[2]*self.testx[1]**2
     
     def test_fit_eval(self):
-        interp = fitting.Spline2DFit((3, 3))
+        interp = fitting.Spline2DScatterFit((3, 3))
+        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        np.testing.assert_almost_equal(y, self.y, decimal=10)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=10)
+
+class Spline2DGridFitTestCases(unittest.TestCase):
+
+    def setUp(self):
+        # Training data is randomly sampled parabola (but remember to keep data in ascending order)
+        poly = np.array([1.0, 2.0, 1.0])
+        self.x = [sorted(np.random.randn(10)), sorted(np.random.randn(20))]
+        xx1, xx0 = np.meshgrid(self.x[1], self.x[0])
+        self.y = poly[0]*xx0*xx0 + poly[1]*xx0*xx1 + poly[2]*xx1*xx1
+        # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
+        self.testx = [sorted(0.2*np.random.randn(8)), sorted(0.2*np.random.randn(12))]
+        testx1, testx0 = np.meshgrid(self.testx[1], self.testx[0])
+        self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
+
+    def test_fit_eval(self):
+        interp = fitting.Spline2DGridFit((3, 3))
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
