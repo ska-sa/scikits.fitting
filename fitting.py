@@ -234,8 +234,9 @@ class Polynomial1DFit(ScatterFit):
     # @param x    Known input values as a 1-D numpy array or sequence
     # @param y    Known output values as a 1-D numpy array, or sequence
     def fit(self, x, y):
-        x = np.atleast_1d(np.asarray(x))
-        y = np.atleast_1d(np.asarray(y))
+        # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
+        x = np.atleast_1d(np.array(x, dtype='double'))
+        y = np.atleast_1d(np.array(y, dtype='double'))
         # Polynomial fits perform better if input data is centred around origin [see numpy.polyfit help]
         self._mean = x.mean()
         # Reduce polynomial degree if there is not enough points to fit (degree should be < len(x))
