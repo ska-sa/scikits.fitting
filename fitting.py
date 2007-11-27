@@ -596,6 +596,23 @@ class NonLinearLeastSquaresFit(ScatterFit):
     # @return     Output of function as a numpy array
     def __call__(self, x):
         return self.func(self.params, x)
+    
+    ## Shallow copy operation.
+    # @param self The current object
+    # pylint: disable-msg=W0142
+    def __copy__(self):
+        return NonLinearLeastSquaresFit(self.func, self.params, self.funcJacobian, \
+                                        self._optimizer.__name__, **self._extraArgs)
+    
+    ## Deep copy operation.
+    # Don't deepcopy stored functions, as this is not supported in Python 2.4 (Python 2.5 supports it...).
+    # @param self The current object
+    # @param memo Dictionary that caches objects that are already copied
+    # pylint: disable-msg=W0142
+    def __deepcopy__(self, memo):
+        return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo), self.funcJacobian, \
+                                        copy.deepcopy(self._optimizer.__name__, memo), \
+                                        **(copy.deepcopy(self._extraArgs, memo)))
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  GaussianFit
