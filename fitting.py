@@ -90,6 +90,29 @@ def unsquash(x, flattenAxes, originalShape, moveFromStart=True):
     else:
         return x.reshape(mainShape + unflattenShape).transpose(np.array(mainAxes + flattenAxes).argsort())
 
+## Ensure that the coordinates of a rectangular grid are all in ascending order.
+# @param  x 1-D array of x coordinates, of shape (M), in any order
+# @param  y 1-D array of y coordinates, of shape (N), in any order
+# @param  z 2-D array of values which correspond to the coordinates in x and y, of shape (M, N)
+# @return x 1-D array of x coordinates, of shape (M), in ascending order
+# @return y 1-D array of y coordinates, of shape (N), in ascending order
+# @return z 2-D array of values which correspond to the coordinates in x and y, of shape (M, N)
+def sort_grid(x, y, z):
+    xInd = np.argsort(x)
+    yInd = np.argsort(y)
+    return x[xInd], y[yInd], z[xInd, :][:, yInd]
+
+## Shuffle a rectangular grid of values (based on ascending coordinates) to correspond to the original order.
+# This undoes the effect of sort_grid.
+# @param  x 1-D array of x coordinates, of shape (M), in the original (possibly unsorted) order
+# @param  y 1-D array of y coordinates, of shape (N), in the original (possibly unsorted) order
+# @param  z 2-D array of values which correspond to sorted (x,y) coordinates, of shape (M, N)
+# @return z 2-D array of values which correspond to the original coordinates in x and y, of shape (M, N)
+def desort_grid(x, y, z):
+    xInd = np.argsort(np.argsort(x))
+    yInd = np.argsort(np.argsort(y))
+    return z[xInd, :][:, yInd]
+
 ## Factory that creates a vectorised version of a function to be fitted to data.
 # This takes functions of the form 'y = f(p,x)' which cannot handle sequences of input arrays for x, and wraps
 # it in a loop which calls f with the elements of the sequence of x values, and returns the corresponding sequence.
@@ -693,7 +716,8 @@ class GaussianFit(ScatterFit):
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Fits a B-spline to 1-D data.
-# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
+# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines (specifically
+# 'curfit' for fitting and 'splev' for evaluation).
 class Spline1DFit(ScatterFit):
     ## Initialiser.
     # @param self   The current object
@@ -754,8 +778,9 @@ class Spline1DFit(ScatterFit):
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Fits a B-spline to scattered 2-D data.
-# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
-# The 2-D x coordinates do not have to lie on a regular grid, and can be in any order.
+# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines (specifically
+# 'surfit' for fitting and 'bispev' for evaluation). The 2-D x coordinates do not have to lie on a regular grid,
+# and can be in any order.
 class Spline2DScatterFit(ScatterFit):
     ## Initialiser.
     # @param self   The current object
@@ -820,8 +845,9 @@ class Spline2DScatterFit(ScatterFit):
 #----------------------------------------------------------------------------------------------------------------------
 
 ## Fits a B-spline to 2-D data on a rectangular grid.
-# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines.
-# The 2-D x coordinates should lie on a rectangular grid.
+# This uses scipy.interpolate, which is based on Paul Dierckx's DIERCKX (or FITPACK) routines (specifically
+# 'regrid' for fitting and 'bispev' for evaluation). The 2-D x coordinates define a rectangular grid.
+# They do not have to be in ascending order, as both the fitting and evaluation routines sort them for you.
 class Spline2DGridFit(GridFit):
     ## Initialiser.
     # @param self   The current object
@@ -849,9 +875,9 @@ class Spline2DGridFit(GridFit):
 
     ## Fit spline to 2-D data on a rectangular grid.
     # This fits a scalar function defined on 2-D data to the provided grid. The first sequence in x defines
-    # the M 'x' axis ticks (in ascending order), while the second sequence in x defines the N 'y' axis ticks.
-    # The provided function output y contains the corresponding 'z' values on the grid, in an array of shape (M, N).
-    # The minimum number of data points is (degree[0]+1)*(degree[1]+1).
+    # the M 'x' axis ticks (in any order), while the second sequence in x defines the N 'y' axis ticks
+    # (also in any order). The provided function output y contains the corresponding 'z' values on the 
+    # grid, in an array of shape (M, N). The minimum number of data points is (degree[0]+1)*(degree[1]+1).
     # @param self The current object
     # @param x    Known input grid specified by sequence of 2 sequences of axis ticks (of lengths M and N)
     # @param y    Known output values as a 2-D numpy array of shape (M, N)
@@ -868,12 +894,14 @@ class Spline2DGridFit(GridFit):
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError, "Not enough data points for spline fit: requires at least " + \
                               str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
-        self._interp = self._splineClass(x[0], x[1], y, kx = self.degree[0], ky = self.degree[1], **self._extraArgs)
+        # Ensure that 'x' and 'y' coordinates are both in ascending order (requirement of underlying regrid)
+        xs, ys, zs = sort_grid(x[0], x[1], y)
+        self._interp = self._splineClass(xs, ys, zs, kx = self.degree[0], ky = self.degree[1], **self._extraArgs)
 
     ## Evaluate spline on a new rectangular grid.
     # Evaluates the fitted scalar function on 2-D grid provided in x. The first sequence in x defines
-    # the M 'x' axis ticks (in ascending order), while the second sequence in x defines the N 'y' axis ticks.
-    # The function returns the corresponding 'z' values on the grid, in an array of shape (M, N).
+    # the M 'x' axis ticks (in any order), while the second sequence in x defines the N 'y' axis ticks (also in
+    # any order). The function returns the corresponding 'z' values on the grid, in an array of shape (M, N).
     # @param self The current object
     # @param x    2-D input grid specified by sequence of 2 sequences of axis ticks (of lengths M and N)
     # @return     Output of function as a 2-D numpy array of shape (M, N)
@@ -885,8 +913,9 @@ class Spline2DGridFit(GridFit):
                               str([ax.shape for ax in x]) + " instead."
         if self._interp == None:
             raise AttributeError, "Spline not fitted to data yet - first call 'fit'."
-        # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid
-        return self._interp(x[0], x[1])
+        # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid in ascending order
+        # Therefore, sort coordinates, evaluate on the sorted grid, and return the desorted result
+        return desort_grid(x[0], x[1], self._interp(sorted(x[0]), sorted(x[1])))
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit
