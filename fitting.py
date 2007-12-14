@@ -549,22 +549,22 @@ class Delaunay2DGridFit(GridFit):
 # also be vectorised, similar to f.
 class NonLinearLeastSquaresFit(ScatterFit):
     ## Initialiser.
-    # @param self         The current object
-    # @param func         Generic function to be fit to x-y data, of the form 'y = f(p,x)' (should be vectorised)
-    # @param params0      Initial guess of function parameter vector p
-    # @param funcJacobian Jacobian of function f, if available, with signature 'J = f(p,x)', where J has the
-    #                     shape (y shape produced by f(p,x), len(p))
-    # @param method       Optimisation method (name of corresponding scipy.optimize function) [default='leastsq']
-    # @param kwargs       Additional keyword arguments are passed to underlying optimiser
+    # @param self          The current object
+    # @param func          Generic function to be fit to x-y data, of the form 'y = f(p,x)' (should be vectorised)
+    # @param initialParams Initial guess of function parameter vector p
+    # @param funcJacobian  Jacobian of function f, if available, with signature 'J = f(p,x)', where J has the
+    #                      shape (y shape produced by f(p,x), len(p))
+    # @param method        Optimisation method (name of corresponding scipy.optimize function) [default='leastsq']
+    # @param kwargs        Additional keyword arguments are passed to underlying optimiser
     # pylint: disable-msg=R0913
-    def __init__(self, func, params0, funcJacobian=None, method='leastsq', **kwargs):
+    def __init__(self, func, initialParams, funcJacobian=None, method='leastsq', **kwargs):
         ScatterFit.__init__(self)
         ## @var func
         # Generic function object to be fit to data
         self.func = func
-        ## @var params
-        # Function parameter vector, either initial guess or final optimal value
-        self.params = params0
+        ## @var initialParams
+        # Initial guess for function parameter vector (preserve it for repeatability of fits)
+        self.initialParams = initialParams
         ## @var funcJacobian
         # Jacobian of function, if available
         self.funcJacobian = funcJacobian
@@ -579,6 +579,9 @@ class NonLinearLeastSquaresFit(ScatterFit):
         # Extra keyword arguments to optimiser
         self._extraArgs = kwargs
         self._extraArgs['full_output'] = 1
+        ## @var params
+        # Final optimal value for function parameter vector (starts off as initial value)
+        self.params = initialParams
     
     ## Fit function to data, by performing non-linear least squares optimisation.
     # This determines the optimal parameter vector p* so that the function 'y = f(p,x)' best fits the
@@ -603,14 +606,21 @@ class NonLinearLeastSquaresFit(ScatterFit):
                 # Produce Jacobian of residual - array with shape (K, normal y shape, N)
                 residualJac = - self.funcJacobian(p, x)
                 # Squash every axis except last one together, to get (M,N) shape
-                return squash(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
+                ravelJac = squash(residualJac, range(len(residualJac.shape)-1), moveToStart=True)
+                if self._optimizer.__name__ == 'leastsq':
+                    # Jacobian of residuals has shape (M,N)
+                    return ravelJac
+                else:
+                    # Jacobian of cost function (sum of squared residuals) has shape (N) instead
+                    residuals = y - self.func(p, x)
+                    return np.dot(ravelJac.transpose(), 2.0 * residuals.ravel())
             if self._optimizer.__name__ == 'leastsq':
                 self._extraArgs['Dfun'] = jacobian
             else:
                 self._extraArgs['fprime'] = jacobian
-        # Do optimisation
+        # Do optimisation (copy initial parameters, as the optimiser clobbers them with final values)
         # pylint: disable-msg=W0142
-        self.params = self._optimizer(cost, self.params, **self._extraArgs)[0]
+        self.params = self._optimizer(cost, copy.deepcopy(self.initialParams), **self._extraArgs)[0]
     
     ## Evaluate fitted function on new data.
     # Evaluates the fitted function 'y = f(p*,x)' on new x data.
