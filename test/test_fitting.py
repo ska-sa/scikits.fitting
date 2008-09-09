@@ -308,3 +308,24 @@ class RandomisedFitTestCases(unittest.TestCase):
                              for n in range(self.numRuns)])
         np.testing.assert_almost_equal(bootPoly.mean(axis=0), noisyPoly[0], decimal=2)
         np.testing.assert_almost_equal(bootPoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
+        
+class Baseline1DFitTestCases(unittest.TestCase):
+    
+    def setUp(self):
+        N = 128
+        self.x = np.arange(N)/float(N)
+        self.b = 3.0 * self.x + 4.0
+        std = 0.05
+        g = np.exp(-0.5 * ((self.x - 0.5) ** 2) / (std ** 2))
+#        g += 0.2*np.exp(-0.5 * ((self.x - 0.3) ** 2) / ((0.5*std) ** 2))
+#        g += 0.2*np.exp(-0.5 * ((self.x - 0.7) ** 2) / ((0.5*std) ** 2))
+        n = 0.01 * random.randn(N)
+        self.y = g + self.b + n
+        self.fwhm = 2.0 * np.sqrt(2.0 * np.log(2.0)) * std
+    
+    def test_fit_eval(self):
+        interp = fitting.Polynomial1DFit(2)
+        baseline = fitting.Baseline1DFit(interp, 0.5*self.fwhm, 0.01)
+        baseline.fit(self.x, self.y)
+        y = baseline(self.x)
+        np.testing.assert_almost_equal(y, self.b, decimal=2)
