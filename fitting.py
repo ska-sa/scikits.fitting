@@ -6,7 +6,7 @@
 # @author Ludwig Schwardt <ludwig@ska.ac.za>
 # @date 2007-08-28
 
-# pylint: disable-msg=C0103,C0302,R0903
+# pylint: disable-msg=C0103,R0903
 
 import scipy.optimize as optimize           # NonLinearLeastSquaresFit
 import scipy.sandbox.delaunay as delaunay   # Delaunay2DScatterFit, Delaunay2DGridFit
@@ -926,127 +926,6 @@ class Spline2DGridFit(GridFit):
         # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid in ascending order
         # Therefore, sort coordinates, evaluate on the sorted grid, and return the desorted result
         return desort_grid(x[0], x[1], self._interp(sorted(x[0]), sorted(x[1])))
-
-#----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Baseline1DFit
-#----------------------------------------------------------------------------------------------------------------------
-
-## Fits a baseline to 1-D data.
-# This fits a specified interpolation function (typically a polynomial or spline) to
-# a 1-D x-y data sequence, where this function serves as the "baseline" of the data.
-# The baseline is defined as a low-order function that closely approximates the 
-# lowest parts of the y data across the entire sequence. That is, the data sequence
-# is assumed to be the sum of a smooth global baseline component and a compact positive
-# component, and optionally some noise component. The fitting process figures out the
-# location of the compact part, and uses the remaining data to estimate the baseline
-# component. The compact part has to be wide enough to prevent latching onto a random
-# peak. The parts of the data used to estimate the baseline is stored in the object,
-# as well as residual statistics. Future versions might use multiple compact components.
-class Baseline1DFit(ScatterFit):
-    
-    ## Initialiser.
-    # @param self The current object
-    # @param interp ScatterFit object that will be fit to baseline segments
-    # @param minWidth Minimum width for a gap in baseline (in units of x)
-    # @param maxProb Maximum probability tolerated for observing a gap in baseline
-    #                if it is assumed the gap occurred by chance
-    # @param widthFunc Optional function that transforms x to another domain
-    #                  for performing width calculations
-    # pylint: disable-msg=E0602,R0914
-    def __init__(self, interp, minWidth, maxProb, widthFunc=(lambda x: x)):
-        ScatterFit.__init__(self)
-        ## @var _baseline
-        # Internal interpolator object that represents the actual baseline
-        self._baseline = interp
-        ## @var _minWidth
-        # Minimum width for a gap in baseline, which is typically associated with
-        # beamwidth, especially when widthFunc is also specified
-        self._minWidth = minWidth
-        ## @var _maxProb
-        # If a contiguous gap in the baseline has a higher probability to occur
-        # by chance than maxProb, it is ignored and considered part of the baseline
-        self._maxProb = maxProb
-        ## @var _widthFunc
-        # Function that transforms x to another domain for performing width
-        # calculations, useful when the unit of x is not physically meaningful
-        self._widthFunc = widthFunc
-        ## @var partOfBaseline
-        # Vector of bools that indicates which parts of x were used to estimate
-        # the baseline
-        self.partOfBaseline = None
-        ## @var residualStdev
-        # Standard deviation of residuals of the last fit
-        self.residualStdev = None
-        ## @var durbinWatson
-        # The Durbin-Watson statistic of the last fit, which is an indication of
-        # the correlation between successive residual values. It ranges from 0 to 4.
-        # Ideally it should be 2, which means uncorrelated residuals. A value of 0
-        # means maximum positive correlation (indicating data that slowly drifts 
-        # around the fitted function), while a value of 4 means maximum negative
-        # correlation (indicating data that oscillates too fast around the fitted
-        # function). A value of above 1 is considered "random enough".
-        self.durbinWatson = None
-        
-    ## Fit baseline function to data.
-    # @param self The current object
-    # @param x    Known input values as a 1-D numpy array or sequence
-    # @param y    Known output values as a 1-D numpy array, or sequence
-    def fit(self, x, y):
-        N = len(x)
-        # Initially the entire data sequence is considered part of the baseline
-        self.partOfBaseline = np.array(N * [True])
-        newPartOfBaseline = np.array(N * [True])
-        # As a safety measure, cap the number of iterations for pathological cases
-        # that oscillate instead of converging (usually converges in a few iterations)
-        # pylint: disable-msg=W0612
-        for iteration in xrange(20):
-            # Fit baseline function to parts of data designated as baseline
-            baselineX, baselineY = x[self.partOfBaseline], y[self.partOfBaseline]
-            self._baseline.fit(baselineX, baselineY)
-            # Divide data into points above and below the fitted baseline
-            abovebelow = y > self._baseline(x)
-            # Calculate residual stats
-            r = baselineY - self._baseline(baselineX)
-            self.residualStdev = r.std()
-            dr = np.diff(r)
-            self.durbinWatson = np.dot(dr, dr) / np.dot(r, r)
-            # Find runs of points above and below the fitted baseline, stored as
-            # the first element in each run (and ending on the one-past-end index)
-            runBorders = np.arange(N)[np.diff(abovebelow)] + 1
-            runBorders = np.array([0] + runBorders.tolist() + [N])
-            # Calculate length of each run, and whether it is above or below the line
-            runLengths = np.diff(runBorders)
-            numRuns = len(runLengths)
-            runAbove = (np.arange(numRuns) % 2) != abovebelow[0]
-            # Sort runs above the baseline according to decreasing length
-            # sortedRunsAbove = np.flipud(np.arange(numRuns)[runAbove][runLengths[runAbove].argsort()])
-            # Find index of longest contiguous run above the baseline, as candidate gap
-            gap = np.arange(numRuns)[runAbove][runLengths[runAbove].argmax()]
-            gapStart, gapEnd = runBorders[gap], runBorders[gap+1]
-            # Check that "physical" width of gap exceeds minimum
-            if np.abs(self._widthFunc(x[gapEnd]) - self._widthFunc(x[gapStart])) < self._minWidth:
-                break
-            # The probability of observing at least 1 length-k subsequence of the same type
-            # (heads/tails or True/False) in a sequence of total length N, assuming the
-            # heads/tails are equiprobable, is approximately P = 1 - (1 - 0.5^k) ^ (N-k)
-            segmentProb = 1.0 - (1.0 - 0.5 ** runLengths[gap]) ** (N - runLengths[gap])
-            # Check that "statistical" width of gap exceeds some minimum
-            if segmentProb > self._maxProb:
-                break
-            # Let baseline segments be everything except the largest gap
-            newPartOfBaseline[:] = True
-            newPartOfBaseline[gapStart:gapEnd] = False
-            # If the baseline segments did not change from the previous iteration, we are done
-            if np.equal(newPartOfBaseline, self.partOfBaseline).all():
-                break
-            self.partOfBaseline[:] = newPartOfBaseline
-    
-    ## Evaluate function 'y = f(x)' on new data.
-    # @param self The current object
-    # @param x    Input to function as a 1-D numpy array, or sequence
-    # @return     Output of function as a 1-D numpy array
-    def __call__(self, x):
-        return self._baseline(x)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit
