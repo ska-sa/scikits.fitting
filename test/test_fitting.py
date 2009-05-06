@@ -1,15 +1,8 @@
-## @file test_fitting.py
-#
-# Unit tests for fitting functions.
-#
-# copyright (c) 2007 SKA/KAT. All rights reserved.
-# @author Ludwig Schwardt <ludwig@ska.ac.za>
-# @date 2007-09-04
+"""Unit tests for the fitting module."""
 
 import unittest
-import xdmsbe.xdmsbelib.fitting as fitting
 import numpy as np
-import numpy.random as random
+from scape import fitting
 
 class Polynomial1DFitTestCases(unittest.TestCase):
     
@@ -55,8 +48,8 @@ class Independent1DFitTestCases(unittest.TestCase):
         self.poly2 = np.array([1.0, 2.0, 10.0])
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.ndarray(shape=(2,7,3))
-        self.yTooLowDim = np.zeros(shape=(3))
-        self.yWrongSize = np.zeros(shape=(2,5,3))
+        self.y_too_low_dim = np.zeros(shape=(3))
+        self.y_wrong_size = np.zeros(shape=(2,5,3))
         self.axis = 1
         self.y[0,:,0] = np.polyval(self.poly1, self.x)
         self.y[0,:,1] = np.polyval(self.poly2, self.x)
@@ -68,8 +61,8 @@ class Independent1DFitTestCases(unittest.TestCase):
     def test_fit_eval(self):
         interp = fitting.Independent1DFit(fitting.Polynomial1DFit(2), self.axis)
         self.assertRaises(AttributeError, interp, self.x)
-        self.assertRaises(ValueError, interp.fit, self.x, self.yTooLowDim)
-        self.assertRaises(ValueError, interp.fit, self.x, self.yWrongSize)
+        self.assertRaises(ValueError, interp.fit, self.x, self.y_too_low_dim)
+        self.assertRaises(ValueError, interp.fit, self.x, self.y_wrong_size)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         self.assertEqual(interp._axis, self.axis)
@@ -90,12 +83,12 @@ class Delaunay2DScatterFitTestCases(unittest.TestCase):
         self.y = np.array([1,1,1,1,1])
         self.testx = np.array([[-0.5,0,0.5,0], [0,-0.5,0.5,0]])
         self.testy = np.array([1,1,1,1])
-        self.defaultVal = -100
+        self.default_val = -100
         self.outsidex = np.array([[10],[10]])
-        self.outsidey = np.array([self.defaultVal])
+        self.outsidey = np.array([self.default_val])
     
     def test_fit_eval_nn(self):
-        interp = fitting.Delaunay2DScatterFit(defaultVal=self.defaultVal)
+        interp = fitting.Delaunay2DScatterFit(default_val=self.default_val)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
@@ -118,13 +111,13 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
         self.testx = [np.linspace(-1, 1, 8), np.linspace(-1, 1, 12)]
         testx1, testx0 = np.meshgrid(self.testx[1], self.testx[0])
         self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
-        self.defaultVal = -100.0
+        self.default_val = -100.0
         # For some reason doesn't work for a single point - requires at least a 2x2 grid
         self.outsidex = [np.array([100, 200]), np.array([100, 200])]
-        self.outsidey = np.tile(self.defaultVal, (len(self.outsidex[0]), len(self.outsidex[1])))
+        self.outsidey = np.tile(self.default_val, (len(self.outsidex[0]), len(self.outsidex[1])))
 
     def test_fit_eval_nn(self):
-        interp = fitting.Delaunay2DGridFit('nn', defaultVal=self.defaultVal)
+        interp = fitting.Delaunay2DGridFit('nn', default_val=self.default_val)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
@@ -136,7 +129,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
     def test_fit_eval_linear(self):
-        interp = fitting.Delaunay2DGridFit('linear', defaultVal=self.defaultVal)
+        interp = fitting.Delaunay2DGridFit('linear', default_val=self.default_val)
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
@@ -152,35 +145,35 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
     def setUp(self):
         # Quadratic function centred at p
         func = lambda p, x: ((x - p)**2).sum()
-        self.vFunc = fitting.vectorizeFitFunc(func)
-        self.trueParams = np.array([1, -4])
-        self.initParams = np.array([0, 0])
+        self.vFunc = fitting.vectorize_fit_func(func)
+        self.true_params = np.array([1, -4])
+        self.init_params = np.array([0, 0])
         self.x = 4.0*np.random.randn(20, 2)
-        self.y = self.vFunc(self.trueParams, self.x)
+        self.y = self.vFunc(self.true_params, self.x)
         # 2-D log Gaussian function
         def lngauss_diagcov(p, x):
             xminmu = x - p[np.newaxis, 0:2]
             return p[4] - 0.5 * np.dot(xminmu * xminmu, p[2:4])
         self.func2 = lngauss_diagcov
-        self.trueParams2 = np.array([3, -2, 10, 10, 4])
-        self.initParams2 = np.array([0, 0, 1, 1, 0])
+        self.true_params2 = np.array([3, -2, 10, 10, 4])
+        self.init_params2 = np.array([0, 0, 1, 1, 0])
         self.x2 = np.random.randn(80, 2)
-        self.y2 = lngauss_diagcov(self.trueParams2, self.x2)
+        self.y2 = lngauss_diagcov(self.true_params2, self.x2)
     
     def test_fit_eval_func1(self):
         self.assertRaises(KeyError, fitting.NonLinearLeastSquaresFit, \
-                          self.vFunc, self.initParams, method='bollie')
-        interp = fitting.NonLinearLeastSquaresFit(self.vFunc, self.initParams, method='fmin_bfgs', disp=0)
+                          self.vFunc, self.init_params, method='bollie')
+        interp = fitting.NonLinearLeastSquaresFit(self.vFunc, self.init_params, method='fmin_bfgs', disp=0)
         interp.fit(self.x, self.y)
         y = interp(self.x)
-        np.testing.assert_almost_equal(interp.params, self.trueParams, decimal=7)
+        np.testing.assert_almost_equal(interp.params, self.true_params, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=5)
     
     def test_fit_eval_gauss(self):
-        interp2 = fitting.NonLinearLeastSquaresFit(self.func2, self.initParams2, method='leastsq')
+        interp2 = fitting.NonLinearLeastSquaresFit(self.func2, self.init_params2, method='leastsq')
         interp2.fit(self.x2, self.y2)
         y2 = interp2(self.x2)
-        np.testing.assert_almost_equal(interp2.params, self.trueParams2, decimal=10)
+        np.testing.assert_almost_equal(interp2.params, self.true_params2, decimal=10)
         np.testing.assert_almost_equal(y2, self.y2, decimal=10)
 
 class GaussianFitTestCases(unittest.TestCase):
@@ -189,19 +182,19 @@ class GaussianFitTestCases(unittest.TestCase):
         # For a more challenging fit, move the true mean away from the origin, i.e. away from the region
         # being randomly sampled in self.x. Fitting a Gaussian to a segment that does not contain a clear peak
         # works fine if the fit is done to the log of the data, but fails in the linear domain.
-        self.trueMean, self.trueVar, self.trueHeight = [0, 0], [10, 20], 4
-        trueGauss = fitting.GaussianFit(self.trueMean, self.trueVar, self.trueHeight)
+        self.true_mean, self.true_var, self.true_height = [0, 0], [10, 20], 4
+        true_gauss = fitting.GaussianFit(self.true_mean, self.true_var, self.true_height)
         self.x = 7*np.random.randn(80, 2)
-        self.y = trueGauss(self.x)
-        self.initMean, self.initVar, self.initHeight = [3, -2], [1, 1], 1
+        self.y = true_gauss(self.x)
+        self.init_mean, self.init_var, self.init_height = [3, -2], [1, 1], 1
     
     def test_fit_eval_diagcov(self):
-        interp = fitting.GaussianFit(self.initMean, self.initVar, self.initHeight)
+        interp = fitting.GaussianFit(self.init_mean, self.init_var, self.init_height)
         interp.fit(self.x, self.y)
         y = interp(self.x)
-        np.testing.assert_almost_equal(interp.mean, self.trueMean, decimal=7)
-        np.testing.assert_almost_equal(interp.var, self.trueVar, decimal=7)
-        np.testing.assert_almost_equal(interp.height, self.trueHeight, decimal=7)
+        np.testing.assert_almost_equal(interp.mean, self.true_mean, decimal=7)
+        np.testing.assert_almost_equal(interp.var, self.true_var, decimal=7)
+        np.testing.assert_almost_equal(interp.height, self.true_height, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
 
 class Spline1DFitTestCases(unittest.TestCase):
@@ -274,37 +267,37 @@ class RandomisedFitTestCases(unittest.TestCase):
         self.poly = np.array([1.0, -2.0, 1.0])
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
-        self.numRuns = 100
-        self.yNoisy = self.y + 0.01*random.randn(self.numRuns, len(self.y))
+        self.num_runs = 100
+        self.yNoisy = self.y + 0.01*np.random.randn(self.num_runs, len(self.y))
     
     def test_randomised_polyfit(self):
         interp = fitting.Polynomial1DFit(2)
         # Perfect fit (no noise)
         interp.fit(self.x, self.y)
-        randomInterp = fitting.randomise(interp, self.x, self.y, 'unknown')
-        y = randomInterp(self.x)
-        np.testing.assert_almost_equal(randomInterp.poly, self.poly, decimal=10)
+        random_interp = fitting.randomise(interp, self.x, self.y, 'unknown')
+        y = random_interp(self.x)
+        np.testing.assert_almost_equal(random_interp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
-        randomInterp = fitting.randomise(interp, self.x, self.y, 'shuffle')
-        y = randomInterp(self.x)
-        np.testing.assert_almost_equal(randomInterp.poly, self.poly, decimal=10)
+        random_interp = fitting.randomise(interp, self.x, self.y, 'shuffle')
+        y = random_interp(self.x)
+        np.testing.assert_almost_equal(random_interp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
         # Fit polynomials to a set of noisy samples
-        noisyPoly = []
-        for noisyY in self.yNoisy:
-            interp.fit(self.x, noisyY)
-            noisyPoly.append(interp.poly)
-        noisyPoly = np.array(noisyPoly)
+        noisy_poly = []
+        for noisy_y in self.yNoisy:
+            interp.fit(self.x, noisy_y)
+            noisy_poly.append(interp.poly)
+        noisy_poly = np.array(noisy_poly)
         # Randomise polynomial fit to first noisy sample in various ways
-        shufflePoly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'shuffle').poly \
-                                for n in range(self.numRuns)])
-        np.testing.assert_almost_equal(shufflePoly.mean(axis=0), noisyPoly[0], decimal=2)
-        np.testing.assert_almost_equal(shufflePoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
-        normalPoly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'normal').poly \
-                               for n in range(self.numRuns)])
-        np.testing.assert_almost_equal(normalPoly.mean(axis=0), noisyPoly[0], decimal=2)
-        np.testing.assert_almost_equal(normalPoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
-        bootPoly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly \
-                             for n in range(self.numRuns)])
-        np.testing.assert_almost_equal(bootPoly.mean(axis=0), noisyPoly[0], decimal=2)
-        np.testing.assert_almost_equal(bootPoly.std(axis=0), noisyPoly.std(axis=0), decimal=2)
+        shuffle_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'shuffle').poly \
+                                 for n in range(self.num_runs)])
+        np.testing.assert_almost_equal(shuffle_poly.mean(axis=0), noisy_poly[0], decimal=2)
+        np.testing.assert_almost_equal(shuffle_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
+        normal_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'normal').poly \
+                                for n in range(self.num_runs)])
+        np.testing.assert_almost_equal(normal_poly.mean(axis=0), noisy_poly[0], decimal=2)
+        np.testing.assert_almost_equal(normal_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
+        boot_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly \
+                              for n in range(self.num_runs)])
+        np.testing.assert_almost_equal(boot_poly.mean(axis=0), noisy_poly[0], decimal=2)
+        np.testing.assert_almost_equal(boot_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
