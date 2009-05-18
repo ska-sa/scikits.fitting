@@ -245,7 +245,7 @@ def desort_grid(x, y, z):
     """
     x_ind = np.argsort(np.argsort(x))
     y_ind = np.argsort(np.argsort(y))
-    return z[xInd, :][:, yInd]
+    return z[x_ind, :][:, y_ind]
 
 def vectorize_fit_func(func):
     """Factory that creates vectorised version of function to be fitted to data.
@@ -1064,7 +1064,7 @@ class GaussianFit(ScatterFit):
             df_dmu = x_min_mu * p[np.newaxis, dim:2*dim]
             df_dsigma = -0.5 * x_min_mu * x_min_mu
             df_dheight = np.ones((N, 1))
-            return np.hstack((dF_dmu, dF_dsigma, dF_dheight))
+            return np.hstack((df_dmu, df_dsigma, df_dheight))
         ScatterFit.__init__(self)
         self.mean = np.atleast_1d(np.asarray(mean))
         self.var = np.atleast_1d(np.asarray(var))
