@@ -1134,7 +1134,7 @@ class Spline1DFit(ScatterFit):
         Additional keyword arguments are passed to underlying spline class
     
     """
-    def __init__(self, degree=3, std_y=lambda x, y: 1.0, method='UnivariateSpline', **kwargs):
+    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(x)), method='UnivariateSpline', **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
         try:
