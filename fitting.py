@@ -107,9 +107,8 @@ def squash(x, flatten_axes, move_to_start=True):
         N-dimensional array to squash
     flatten_axes : list of ints
         List of axes along which *x* should be flattened
-    move_to_start : bool
+    move_to_start : bool, optional
         Flag indicating whether flattened axis is moved to start or end of array
-        [default=True]
     
     Returns
     -------
@@ -166,9 +165,8 @@ def unsquash(x, flatten_axes, original_shape, move_from_start=True):
         List of (original) axes along which *x* was flattened
     original_shape : List of ints
         Original shape of *x*, before flattening
-    move_from_start : bool
-        Flag indicating whether flattened axes were moved to start or end of
-        array [default=True]
+    move_from_start : bool, optional
+        Flag indicating whether flattened axes were moved to start or end of array
     
     Returns
     -------
@@ -302,7 +300,7 @@ def randomise(interp, x, y, method='shuffle'):
     y : array
         Known output values as a numpy array (typically the data to which the
         function was originally fitted)
-    method : {'shuffle', 'normal', 'bootstrap'}
+    method : {'shuffle', 'normal', 'bootstrap'}, optional
         Resampling technique used to resample residuals
     
     Returns
@@ -452,7 +450,7 @@ class Polynomial1DFit(ScatterFit):
     max_degree : int
         Maximum polynomial degree to use (automatically reduced if there are not
         enough data points)
-    rcond : float
+    rcond : float, optional
         Relative condition number of fit (smallest singular value that will be
         used to fit polynomial, has sensible default)
     
@@ -674,15 +672,14 @@ class Delaunay2DScatterFit(ScatterFit):
     
     Parameters
     ----------
-    interp_type : {'nn'}
+    interp_type : {'nn'}, optional
         String indicating type of interpolation (only 'nn' currently supported)
-        [default='nn']
-    default_val : float
+    default_val : float, optional
         Default value used when trying to extrapolate beyond convex hull of
-        known data [default=NaN]
-    jitter : bool
+        known data
+    jitter : bool, optional
         True to add small amount of jitter to *x* to make degenerate
-        triangulation unlikely [default=False]
+        triangulation unlikely
     
     """
     def __init__(self, interp_type='nn', default_val=np.nan, jitter=False):
@@ -775,11 +772,10 @@ class Delaunay2DGridFit(GridFit):
     
     Parameters
     ----------
-    interp_type : {'linear', 'nn'}
-        String indicating type of interpolation [default='nn']
-    default_val : float
+    interp_type : {'linear', 'nn'}, optional
+        String indicating type of interpolation
+    default_val : float, optional
         Default value used when trying to extrapolate beyond known grid
-        [default=NaN]
     
     """
     def __init__(self, interp_type='nn', default_val=np.nan):
@@ -892,14 +888,14 @@ class NonLinearLeastSquaresFit(ScatterFit):
     func : function, signature ``y = f(p, x)``
         Generic function to be fit to x-y data (should be vectorised)
     initial_params : sequence, length N
-        Initial guess of function parameter vector ``p``
-    func_jacobian : function, signature `J = f(p, x)`
+        Initial guess of function parameter vector *p*
+    func_jacobian : function, signature ``J = f(p, x)``, optional
         Jacobian of function f, if available, where J has the shape
         (y shape produced by f(p, x), N)
-    method : string
+    method : string, optional
         Optimisation method (name of corresponding func:`scipy.optimize`
-        function) [default='leastsq']
-    kwargs : dict
+        function)
+    kwargs : dict, optional
         Additional keyword arguments are passed to underlying optimiser
     
     Arguments
@@ -1125,16 +1121,20 @@ class Spline1DFit(ScatterFit):
     
     Parameters
     ----------
-    degree : int
+    degree : int, optional
         Degree of spline (in range 1-5) [default=3, i.e. cubic B-spline]
-    method : string
+    std_y : function, signature ``s = f(x, y)``, optional
+        Function evaluating the standard deviation of *y*. This is evaluated
+        during fit() with the (x, y) data to fit as parameters, and should
+        return an array of shape (N,) representing the standard deviation of
+        each sample in *y*.
+    method : string, optional
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
-        [default='UnivariateSpline']
-    kwargs : dict
+    kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
     
     """
-    def __init__(self, degree=3, method='UnivariateSpline', **kwargs):
+    def __init__(self, degree=3, std_y=lambda x, y: 1.0, method='UnivariateSpline', **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
         try:
@@ -1143,6 +1143,8 @@ class Spline1DFit(ScatterFit):
         except KeyError:
             raise KeyError, 'Spline class "' + method + '" unknown - should be one of: ' \
                   + ' '.join([name for name in dierckx.__dict__.iterkeys() if name.find('UnivariateSpline') >= 0])
+        # Standard deviation of y
+        self._std_y = std_y
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
@@ -1172,7 +1174,7 @@ class Spline1DFit(ScatterFit):
             sort_ind = x.argsort()
             x = x[sort_ind]
             y = y[sort_ind]
-        self._interp = self._spline_class(x, y, k = self.degree, **self._extra_args)
+        self._interp = self._spline_class(x, y, w=1.0 / self._std_y(x, y), k=self.degree, **self._extra_args)
     
     def __call__(self, x):
         """Evaluate spline on new data.
@@ -1207,13 +1209,11 @@ class Spline2DScatterFit(ScatterFit):
     
     Parameters
     ----------
-    degree : sequence of 2 ints
-        Degree (1-5) of spline in x and y directions [default=(3, 3), i.e. 
-        bicubic B-spline]
-    method : string
+    degree : sequence of 2 ints, optional
+        Degree (1-5) of spline in x and y directions
+    method : string, optional
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
-        [default='SmoothBivariateSpline']
-    kwargs : dict
+    kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
     
     """
@@ -1255,7 +1255,7 @@ class Spline2DScatterFit(ScatterFit):
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError, "Not enough data points for spline fit: requires at least " + \
                               str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
-        self._interp = self._spline_class(x[0], x[1], y, kx = self.degree[0], ky = self.degree[1], **self._extra_args)
+        self._interp = self._spline_class(x[0], x[1], y, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
     
     def __call__(self, x):
         """Evaluate spline on new scattered data.
@@ -1296,13 +1296,11 @@ class Spline2DGridFit(GridFit):
     
     Parameters
     ----------
-    degree : sequence of 2 ints
-        Degree (1-5) of spline in x and y directions [default=(3, 3), i.e.
-        bicubic B-spline]
-    method : string
+    degree : sequence of 2 ints, optional
+        Degree (1-5) of spline in x and y directions
+    method : string, optional
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
-        [default='RectBivariateSpline']
-    kwargs : dict
+    kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
     
     """
@@ -1351,7 +1349,7 @@ class Spline2DGridFit(GridFit):
                               str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
         # Ensure that 'x' and 'y' coordinates are both in ascending order (requirement of underlying regrid)
         xs, ys, zs = sort_grid(x[0], x[1], y)
-        self._interp = self._spline_class(xs, ys, zs, kx = self.degree[0], ky = self.degree[1], **self._extra_args)
+        self._interp = self._spline_class(xs, ys, zs, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
 
     def __call__(self, x):
         """Evaluate spline on a new rectangular grid.
