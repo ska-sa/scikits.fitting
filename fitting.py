@@ -65,11 +65,13 @@ Helper functions
 import scipy.optimize as optimize           # NonLinearLeastSquaresFit
 # Since scipy 0.7.0 the delaunay module lives in scikits
 try:
+    # pylint: disable-msg=E0611
     import scikits.delaunay as delaunay   # Delaunay2DScatterFit, Delaunay2DGridFit
     delaunay_found = True
 except ImportError:
     # In scipy 0.6.0 and before, the delaunay module is in the sandbox
     try:
+        # pylint: disable-msg=E0611,F0401
         import scipy.sandbox.delaunay as delaunay
         delaunay_found = True
     except ImportError:
@@ -1046,6 +1048,7 @@ class GaussianFit(ScatterFit):
     domain as well.
     
     """
+    # pylint: disable-msg=W0612
     def __init__(self, mean, var, height):
         # D-dimensional Gaussian curve with diagonal covariance matrix, in vectorised form
         def gauss_diagcov(p, x):
