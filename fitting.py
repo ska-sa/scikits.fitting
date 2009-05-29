@@ -459,7 +459,7 @@ class Polynomial1DFit(ScatterFit):
     Arguments
     ---------
     poly : real array
-        Polynomial coefficients, only set after :func:`fit`
+        Polynomial coefficients (highest order first), only set after :func:`fit`
     
     """
     def __init__(self, max_degree, rcond=None):
