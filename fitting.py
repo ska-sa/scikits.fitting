@@ -920,7 +920,8 @@ class NonLinearLeastSquaresFit(ScatterFit):
                             'anneal fmin fmin_bfgs fmin_cg fmin_l_bfgs_b fmin_powell fmin_tnc leastsq'
         # Extra keyword arguments to optimiser
         self._extra_args = kwargs
-        self._extra_args['full_output'] = 1
+        if not method in ('fmin_l_bfgs_b', 'fmin_tnc'):
+            self._extra_args['full_output'] = 1
         self.params = initial_params
     
     def fit(self, x, y):
