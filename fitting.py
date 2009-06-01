@@ -235,7 +235,7 @@ def desort_grid(x, y, z):
     y : array, shape (N,)
         1-D array of y coordinates, in the original (possibly unsorted) order
     z : array, shape (M, N)
-        2-D array of values which correspond to sorted (x,y) coordinates
+        2-D array of values which correspond to sorted (x, y) coordinates
     
     Returns
     -------
@@ -716,8 +716,8 @@ class Delaunay2DScatterFit(ScatterFit):
         x = np.atleast_2d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
         if (len(x.shape) != 2) or (x.shape[0] != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
-            raise ValueError, "Delaunay interpolator requires input data with shape (2,N) and output data with " \
-                              " shape (N), got " + str(x.shape) + " and " + str(y.shape) + " instead."
+            raise ValueError("Delaunay interpolator requires input data with shape (2, N) and output data with " +
+                             " shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
         if self.jitter:
             x = x + 0.00001 * x.std(axis=1)[:, np.newaxis] * np.random.standard_normal(x.shape)
         tri = delaunay.Triangulation(x[0], x[1])
@@ -743,10 +743,10 @@ class Delaunay2DScatterFit(ScatterFit):
         # Check dimensions
         x = np.atleast_2d(np.asarray(x))
         if (len(x.shape) != 2) or (x.shape[0] != 2):
-            raise ValueError, "Delaunay interpolator requires input data with shape (2,N), got " + \
-                              str(x.shape) + " instead."
+            raise ValueError("Delaunay interpolator requires input data with shape (2, N), got " + 
+                             str(x.shape) + " instead.")
         if self._interp == None:
-            raise AttributeError, "Interpolator function not fitted to data yet - first call 'fit'."
+            raise AttributeError("Interpolator function not fitted to data yet - first call 'fit'.")
         return self._interp(x[0], x[1])
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -782,8 +782,8 @@ class Delaunay2DGridFit(GridFit):
     """
     def __init__(self, interp_type='nn', default_val=np.nan):
         if not delaunay_found:
-            raise ImportError, "Delaunay module not found - install it from" + \
-                  " scikits (or recompile SciPy <= 0.6.0 with sandbox enabled)"
+            raise ImportError("Delaunay module not found - install it from" + 
+                              " scikits (or recompile SciPy <= 0.6.0 with sandbox enabled)")
         GridFit.__init__(self)
         self.interp_type = interp_type
         self.default_val = default_val
@@ -813,9 +813,9 @@ class Delaunay2DGridFit(GridFit):
         y = np.atleast_2d(np.asarray(y))
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1) or (len(y.shape) != 2) or \
            (y.shape[0] != len(x[0])) or (y.shape[1] != len(x[1])):
-            raise ValueError, "Delaunay interpolator requires input data with shape [(M,), (N,)] " \
-                              " and output data with shape (M, N), got " + str([ax.shape for ax in x]) + \
-                              " and " + str(y.shape) + " instead."
+            raise ValueError("Delaunay interpolator requires input data with shape [(M,), (N,)] " +
+                             " and output data with shape (M, N), got " + str([ax.shape for ax in x]) +
+                             " and " + str(y.shape) + " instead.")
         if (x[0][0] != x[1][0]) or (x[0][-1] != x[1][-1]):
             logger.warning("The first and last values of x[0] and x[1] do not match up, " +
                            "which may lead to unexpected results...")
@@ -853,10 +853,10 @@ class Delaunay2DGridFit(GridFit):
         # Check dimensions
         x = [np.atleast_1d(np.asarray(ax)) for ax in x]
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1):
-            raise ValueError, "Delaunay interpolator requires input data with shape [(M,), (N,)], got " + \
-                              str([ax.shape for ax in x]) + " instead."
+            raise ValueError("Delaunay interpolator requires input data with shape [(M,), (N,)], got " +
+                             str([ax.shape for ax in x]) + " instead.")
         if self._interp == None:
-            raise AttributeError, "Interpolator function not fitted to data yet - first call 'fit'."
+            raise AttributeError("Interpolator function not fitted to data yet - first call 'fit'.")
         return self._interp[x[0][0]:x[0][-1]:len(x[0])*1j, x[1][0]:x[1][-1]:len(x[1])*1j]
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -916,8 +916,8 @@ class NonLinearLeastSquaresFit(ScatterFit):
         try:
             self._optimizer = optimize.__dict__[method]
         except KeyError:
-            raise KeyError, 'Optimisation method "' + method + '" unknown - should be one of: ' \
-                            'anneal fmin fmin_bfgs fmin_cg fmin_l_bfgs_b fmin_powell fmin_tnc leastsq'
+            raise KeyError('Optimisation method "' + method + '" unknown - should be one of: ' +
+                           'anneal fmin fmin_bfgs fmin_cg fmin_l_bfgs_b fmin_powell fmin_tnc leastsq')
         # Extra keyword arguments to optimiser
         self._extra_args = kwargs
         if not method in ('fmin_l_bfgs_b', 'fmin_tnc'):
@@ -1069,7 +1069,7 @@ class GaussianFit(ScatterFit):
         self.mean = np.atleast_1d(np.asarray(mean))
         self.var = np.atleast_1d(np.asarray(var))
         if (len(self.mean.shape) != 1) or (len(self.var.shape) != 1) or (self.mean.shape != self.var.shape):
-            raise ValueError, "Dimensions of mean and/or variance incorrect (should be rank-1 and the same)."
+            raise ValueError("Dimensions of mean and/or variance incorrect (should be rank-1 and the same).")
         self.height = height
         # Create parameter vector for optimisation
         params = np.concatenate((self.mean, 1.0 / self.var, [self.height]))
@@ -1145,8 +1145,9 @@ class Spline1DFit(ScatterFit):
             # Underlying spline class
             self._spline_class = dierckx.__dict__[method]
         except KeyError:
-            raise KeyError, 'Spline class "' + method + '" unknown - should be one of: ' \
-                  + ' '.join([name for name in dierckx.__dict__.iterkeys() if name.find('UnivariateSpline') >= 0])
+            raise KeyError('Spline class "' + method + '" unknown - should be one of: ' +
+                           ' '.join([name for name in dierckx.__dict__.iterkeys() 
+                                     if name.find('UnivariateSpline') >= 0]))
         # Standard deviation of y
         self._std_y = std_y
         # Extra keyword arguments to spline class
@@ -1171,8 +1172,8 @@ class Spline1DFit(ScatterFit):
         x = np.atleast_1d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
         if y.size < self.degree + 1:
-            raise ValueError, "Not enough data points for spline fit: requires at least " + \
-                              str(self.degree + 1) + ", only got " + str(y.size)
+            raise ValueError("Not enough data points for spline fit: requires at least " +
+                             str(self.degree + 1) + ", only got " + str(y.size))
         # Ensure that x is in strictly ascending order
         if np.any(np.diff(x) < 0):
             sort_ind = x.argsort()
@@ -1196,7 +1197,7 @@ class Spline1DFit(ScatterFit):
         """
         x = np.atleast_1d(np.asarray(x))
         if self._interp == None:
-            raise AttributeError, "Spline not fitted to data yet - first call 'fit'."
+            raise AttributeError("Spline not fitted to data yet - first call 'fit'.")
         return self._interp(x)
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -1228,8 +1229,9 @@ class Spline2DScatterFit(ScatterFit):
             # Underlying spline class
             self._spline_class = dierckx.__dict__[method]
         except KeyError:
-            raise KeyError, 'Spline class "' + method + r'" unknown - should be one of: ' \
-                  + ' '.join([name for name in dierckx.__dict__.iterkeys() if name.find('BivariateSpline') >= 0])
+            raise KeyError('Spline class "' + method + r'" unknown - should be one of: ' +
+                           ' '.join([name for name in dierckx.__dict__.iterkeys()
+                                     if name.find('BivariateSpline') >= 0]))
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
@@ -1254,11 +1256,11 @@ class Spline2DScatterFit(ScatterFit):
         x = np.atleast_2d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
         if (len(x.shape) != 2) or (x.shape[0] != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
-            raise ValueError, "Spline interpolator requires input data with shape (2,N) and output data with " \
-                              " shape (N), got " + str(x.shape) + " and " + str(y.shape) + " instead."
+            raise ValueError("Spline interpolator requires input data with shape (2, N) and output data with " +
+                              " shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
-            raise ValueError, "Not enough data points for spline fit: requires at least " + \
-                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
+            raise ValueError("Not enough data points for spline fit: requires at least " +
+                             str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size))
         self._interp = self._spline_class(x[0], x[1], y, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
     
     def __call__(self, x):
@@ -1278,10 +1280,10 @@ class Spline2DScatterFit(ScatterFit):
         # Check dimensions
         x = np.atleast_2d(np.asarray(x))
         if (len(x.shape) != 2) or (x.shape[0] != 2):
-            raise ValueError, "Spline interpolator requires input data with shape (2,N), got " + \
-                              str(x.shape) + " instead."
+            raise ValueError("Spline interpolator requires input data with shape (2,N), got " +
+                             str(x.shape) + " instead.")
         if self._interp == None:
-            raise AttributeError, "Spline not fitted to data yet - first call 'fit'."
+            raise AttributeError("Spline not fitted to data yet - first call 'fit'.")
         # Loop over individual data points, as underlying bispev routine expects regular grid in x
         return np.array([self._interp(x[0, n], x[1, n]) for n in xrange(x.shape[1])]).squeeze()
 
@@ -1315,8 +1317,9 @@ class Spline2DGridFit(GridFit):
             # Underlying spline class
             self._spline_class = dierckx.__dict__[method]
         except KeyError:
-            raise KeyError, 'Spline class "' + method + r'" unknown - should be one of: ' \
-                  + ' '.join([name for name in dierckx.__dict__.iterkeys() if name.find('BivariateSpline') >= 0])
+            raise KeyError('Spline class "' + method + r'" unknown - should be one of: ' +
+                           ' '.join([name for name in dierckx.__dict__.iterkeys()
+                                     if name.find('BivariateSpline') >= 0]))
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
@@ -1345,12 +1348,12 @@ class Spline2DGridFit(GridFit):
         y = np.atleast_2d(np.asarray(y))
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1) or (len(y.shape) != 2) or \
            (y.shape[0] != len(x[0])) or (y.shape[1] != len(x[1])):
-            raise ValueError, "Spline interpolator requires input data with shape [(M,), (N,)] " \
-                              " and output data with shape (M, N), got " + str([ax.shape for ax in x]) + \
-                              " and " + str(y.shape) + " instead."
+            raise ValueError("Spline interpolator requires input data with shape [(M,), (N,)] " +
+                             " and output data with shape (M, N), got " + str([ax.shape for ax in x]) +
+                             " and " + str(y.shape) + " instead.")
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
-            raise ValueError, "Not enough data points for spline fit: requires at least " + \
-                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size)
+            raise ValueError("Not enough data points for spline fit: requires at least " +
+                             str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size))
         # Ensure that 'x' and 'y' coordinates are both in ascending order (requirement of underlying regrid)
         xs, ys, zs = sort_grid(x[0], x[1], y)
         self._interp = self._spline_class(xs, ys, zs, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
@@ -1378,10 +1381,10 @@ class Spline2DGridFit(GridFit):
         # Check dimensions
         x = [np.atleast_1d(np.asarray(ax)) for ax in x]
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1):
-            raise ValueError, "Spline interpolator requires input data with shape [(M,), (N,)], got " + \
-                              str([ax.shape for ax in x]) + " instead."
+            raise ValueError("Spline interpolator requires input data with shape [(M,), (N,)], got " +
+                             str([ax.shape for ax in x]) + " instead.")
         if self._interp == None:
-            raise AttributeError, "Spline not fitted to data yet - first call 'fit'."
+            raise AttributeError("Spline not fitted to data yet - first call 'fit'.")
         # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid in ascending order
         # Therefore, sort coordinates, evaluate on the sorted grid, and return the desorted result
         return desort_grid(x[0], x[1], self._interp(sorted(x[0]), sorted(x[1])))
