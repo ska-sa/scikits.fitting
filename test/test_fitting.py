@@ -195,7 +195,7 @@ class GaussianFitTestCases(unittest.TestCase):
         interp.fit(self.x, self.y)
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.mean, self.true_mean, decimal=7)
-        np.testing.assert_almost_equal(interp.var, self.true_var, decimal=7)
+        np.testing.assert_almost_equal(interp.var, self.true_var, decimal=6)
         np.testing.assert_almost_equal(interp.height, self.true_height, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
 
