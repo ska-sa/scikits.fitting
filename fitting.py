@@ -1138,7 +1138,7 @@ class Spline1DFit(ScatterFit):
         Additional keyword arguments are passed to underlying spline class
     
     """
-    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(x)), method='UnivariateSpline', **kwargs):
+    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(y)), method='UnivariateSpline', **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
         try:
@@ -1216,13 +1216,19 @@ class Spline2DScatterFit(ScatterFit):
     ----------
     degree : sequence of 2 ints, optional
         Degree (1-5) of spline in x and y directions
+    std_y : function, signature ``s = f(x, y)``, optional
+        Function evaluating the standard deviation of *y*. This is evaluated
+        during fit() with the (x, y) data to fit as parameters, and should
+        return an array of shape (N,) representing the standard deviation of
+        each sample in *y*.
     method : string, optional
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
     
     """
-    def __init__(self, degree=(3, 3), method='SmoothBivariateSpline', **kwargs):
+    def __init__(self, degree=(3, 3), std_y=lambda x, y: np.tile(1.0, len(y)),
+                 method='SmoothBivariateSpline', **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
         try:
@@ -1234,6 +1240,8 @@ class Spline2DScatterFit(ScatterFit):
                                      if name.find('BivariateSpline') >= 0]))
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
+        # Standard deviation of y
+        self._std_y = std_y
         # Interpolator function, only set after :func:`fit`
         self._interp = None
     
@@ -1261,7 +1269,8 @@ class Spline2DScatterFit(ScatterFit):
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError("Not enough data points for spline fit: requires at least " +
                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size))
-        self._interp = self._spline_class(x[0], x[1], y, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
+        self._interp = self._spline_class(x[0], x[1], y, w=1.0 / self._std_y(x, y), 
+                                          kx=self.degree[0], ky=self.degree[1], **self._extra_args)
     
     def __call__(self, x):
         """Evaluate spline on new scattered data.
