@@ -270,7 +270,7 @@ class RandomisedFitTestCases(unittest.TestCase):
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
         self.num_runs = 100
-        self.yNoisy = self.y + 0.01*np.random.randn(self.num_runs, len(self.y))
+        self.yNoisy = self.y + 0.001*np.random.randn(self.num_runs, len(self.y))
     
     def test_randomised_polyfit(self):
         interp = fitting.Polynomial1DFit(2)
@@ -298,8 +298,8 @@ class RandomisedFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(shuffle_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
         normal_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'normal').poly \
                                 for n in range(self.num_runs)])
-        np.testing.assert_almost_equal(normal_poly.mean(axis=0), noisy_poly[0], decimal=1)
-        np.testing.assert_almost_equal(normal_poly.std(axis=0), noisy_poly.std(axis=0), decimal=1)
+        np.testing.assert_almost_equal(normal_poly.mean(axis=0), noisy_poly[0], decimal=2)
+        np.testing.assert_almost_equal(normal_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
         boot_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly \
                               for n in range(self.num_runs)])
         np.testing.assert_almost_equal(boot_poly.mean(axis=0), noisy_poly[0], decimal=2)
