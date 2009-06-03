@@ -286,7 +286,7 @@ def randomise(interp, x, y, method='shuffle'):
     The method is therefore non-deterministic. Three resampling methods are
     supported:
     
-    - 'shuffle': permute the residuals (sample from the residuals without 
+    - 'shuffle': permute the residuals (sample from the residuals without
       replacement)
     - 'normal': replace the residuals with zero-mean Gaussian noise with the
       same variance
@@ -403,7 +403,7 @@ class GridFit(object):
     """
     def __init__(self):
         pass
-
+    
     def fit(self, x, y):
         """Fit function ``y = f(x)`` to data.
         
@@ -420,7 +420,7 @@ class GridFit(object):
         
         """
         raise NotImplementedError
-
+    
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
         
@@ -507,6 +507,116 @@ class Polynomial1DFit(ScatterFit):
             raise AttributeError, "Polynomial not fitted to data yet - first call 'fit'."
         x = np.atleast_1d(np.asarray(x))
         return np.polyval(self.poly, x - self._mean)
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  Polynomial2DFit
+#----------------------------------------------------------------------------------------------------------------------
+
+class Polynomial2DFit(ScatterFit):
+    """Fit polynomial to 2-D data.
+    
+    This extends :func:`numpy.polyfit` and :func:`numpy.polyval` to 2 dimensions.
+    The 2-D polynomial has (degrees[0] + 1) * (degrees[1] + 1) coefficients.
+    
+    Parameters
+    ----------
+    degrees : list of 2 ints
+        Non-negative polynomial degree to use for each dimension of *x*
+    
+    Arguments
+    ---------
+    poly : real array, shape ((degrees[0] + 1) * (degrees[1] + 1),)
+        Polynomial coefficients (highest order first), only set after :func:`fit`
+    
+    """
+    def __init__(self, degrees):
+        ScatterFit.__init__(self)
+        self.degrees = degrees
+        # Mean and scale of input data, only set after :func:`fit`
+        self._mean = None
+        self._scale = None
+        self.poly = None
+    
+    def _regressor(self, x):
+        """Form normalised regressor matrix from set of input vectors.
+        
+        Parameters
+        ----------
+        x : array, shape (2, M)
+            Input to function as a 2-D numpy array
+        
+        Returns
+        -------
+        X : array, shape (M, (degrees[0] + 1) * (degrees[1] + 1))
+            Regressor matrix
+        
+        Notes
+        -----
+        This normalises the 2-D input vectors by centering and scaling them.
+        It then forms a regressor matrix with a row per input vector. Each row
+        is given by the outer product of the monomials of the first dimension
+        with the monomials of the second dimension of the input vector, in
+        decreasing polynomial order. For example, if *degrees* is (1, 2) and
+        the elements of each input vector in *x* are *x_0* and *x_1*,
+        respectively, the row takes the form::
+            
+            [x_0 * x_1 ^ 2, x_0 * x_1, x_0 * 1, 1 * x_1 ^ 2, 1 * x_1, 1 * 1]
+            or [x_0 * x_1 ^ 2, x_0 * x_1, x_0, x_1 ^ 2, x_1, 1]
+        
+        This is closely related to the Vandermonde matrix of *x*.
+        
+        """
+        x_norm = (x - self._mean[:, np.newaxis]) / self._scale[:, np.newaxis]
+        v1 = np.vander(x_norm[0], self.degrees[0] + 1)
+        v2 = np.vander(x_norm[1], self.degrees[1] + 1)
+        return np.hstack([v1[:, n][:, np.newaxis] * v2 for n in xrange(v1.shape[1])])
+    
+    def fit(self, x, y):
+        """Fit polynomial to data.
+        
+        This fits a polynomial defined on 2-D data to the provided (x, y)
+        pairs. The 2-D *x* coordinates do not have to lie on a regular grid,
+        and can be in any order.
+        
+        Parameters
+        ----------
+        x : array-like, shape (2, N)
+            Known input values as a 2-D numpy array, or sequence
+        y : array-like, shape (N,)
+            Known output values as a 1-D numpy array, or sequence
+        
+        """
+        # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
+        x = np.atleast_2d(np.array(x, dtype='double'))
+        y = np.atleast_1d(np.array(y, dtype='double'))
+        # Polynomial fits perform better if input data is centred around origin and scaled [see numpy.polyfit help]
+        self._mean = x.mean(axis=1)
+        self._scale = np.abs(x - self._mean[:, np.newaxis]).max(axis=1)
+        self._scale[self._scale == 0.0] = 1.0
+        # Solve least squares regression problem
+        poly, resids, rank, svals = np.linalg.lstsq(self._regressor(x), y)
+        if rank != len(poly):
+            logger.warning('Polynomial fit may be poorly conditioned')
+        self.poly = poly
+    
+    def __call__(self, x):
+        """Evaluate polynomial on new data.
+        
+        Parameters
+        ----------
+        x : array-like, shape (2, M)
+            Input to function as a 2-D numpy array, or sequence
+        
+        Returns
+        -------
+        y : array, shape (M,)
+            Output of function as a 1-D numpy array
+        
+        """
+        if (self.poly == None) or (self._mean == None):
+            raise AttributeError("Polynomial not fitted to data yet - first call 'fit'.")
+        x = np.atleast_2d(np.asarray(x))
+        return np.dot(self._regressor(x), self.poly)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  ReciprocalFit
@@ -619,8 +729,8 @@ class Independent1DFit(ScatterFit):
         for n in range(num_interps):
             flat_interps[n] = copy.deepcopy(self._interp)
             flat_interps[n].fit(x, flat_y[n])
-    
 
+    
     def __call__(self, x):
         """Evaluate set of interpolator functions on new data.
         
@@ -743,7 +853,7 @@ class Delaunay2DScatterFit(ScatterFit):
         # Check dimensions
         x = np.atleast_2d(np.asarray(x))
         if (len(x.shape) != 2) or (x.shape[0] != 2):
-            raise ValueError("Delaunay interpolator requires input data with shape (2, N), got " + 
+            raise ValueError("Delaunay interpolator requires input data with shape (2, N), got " +
                              str(x.shape) + " instead.")
         if self._interp == None:
             raise AttributeError("Interpolator function not fitted to data yet - first call 'fit'.")
@@ -782,7 +892,7 @@ class Delaunay2DGridFit(GridFit):
     """
     def __init__(self, interp_type='nn', default_val=np.nan):
         if not delaunay_found:
-            raise ImportError("Delaunay module not found - install it from" + 
+            raise ImportError("Delaunay module not found - install it from" +
                               " scikits (or recompile SciPy <= 0.6.0 with sandbox enabled)")
         GridFit.__init__(self)
         self.interp_type = interp_type
@@ -1005,7 +1115,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
             Dictionary that caches objects that are already copied
         
         """
-        return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo), self.func_jacobian, 
+        return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo), self.func_jacobian,
                                         copy.deepcopy(self._optimizer.__name__, memo),
                                         **(copy.deepcopy(self._extra_args, memo)))
 
@@ -1146,7 +1256,7 @@ class Spline1DFit(ScatterFit):
             self._spline_class = dierckx.__dict__[method]
         except KeyError:
             raise KeyError('Spline class "' + method + '" unknown - should be one of: ' +
-                           ' '.join([name for name in dierckx.__dict__.iterkeys() 
+                           ' '.join([name for name in dierckx.__dict__.iterkeys()
                                      if name.find('UnivariateSpline') >= 0]))
         # Standard deviation of y
         self._std_y = std_y
@@ -1269,7 +1379,7 @@ class Spline2DScatterFit(ScatterFit):
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError("Not enough data points for spline fit: requires at least " +
                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size))
-        self._interp = self._spline_class(x[0], x[1], y, w=1.0 / self._std_y(x, y), 
+        self._interp = self._spline_class(x[0], x[1], y, w=1.0 / self._std_y(x, y),
                                           kx=self.degree[0], ky=self.degree[1], **self._extra_args)
     
     def __call__(self, x):
@@ -1333,7 +1443,7 @@ class Spline2DGridFit(GridFit):
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
         self._interp = None
-
+    
     def fit(self, x, y):
         """Fit spline to 2-D data on a rectangular grid.
         
@@ -1366,7 +1476,7 @@ class Spline2DGridFit(GridFit):
         # Ensure that 'x' and 'y' coordinates are both in ascending order (requirement of underlying regrid)
         xs, ys, zs = sort_grid(x[0], x[1], y)
         self._interp = self._spline_class(xs, ys, zs, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
-
+    
     def __call__(self, x):
         """Evaluate spline on a new rectangular grid.
         
