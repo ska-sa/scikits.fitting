@@ -594,7 +594,8 @@ class Polynomial2DFit(ScatterFit):
         self._scale = np.abs(x - self._mean[:, np.newaxis]).max(axis=1)
         self._scale[self._scale == 0.0] = 1.0
         # Solve least squares regression problem
-        poly, resids, rank, svals = np.linalg.lstsq(self._regressor(x), y)
+        results = np.linalg.lstsq(self._regressor(x), y)
+        poly, rank = results[0], results[2]
         if rank != len(poly):
             logger.warning('Polynomial fit may be poorly conditioned')
         self.poly = poly
