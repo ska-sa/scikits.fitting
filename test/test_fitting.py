@@ -6,6 +6,7 @@ import numpy as np
 from scape import fitting
 
 class Polynomial1DFitTestCases(unittest.TestCase):
+    """Fit a 1-D polynomial to data from a known polynomial, and compare."""
     
     def setUp(self):
         self.poly = np.array([1.0, -2.0, 1.0])
@@ -28,6 +29,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(interp.poly, [1.0], decimal=10)
 
 class ReciprocalFitTestCases(unittest.TestCase):
+    """Check the ReciprocalFit class."""
     
     def setUp(self):
         self.poly = np.array([1.0, 2.0, 10.0])
@@ -44,7 +46,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
 class Independent1DFitTestCases(unittest.TestCase):
-    
+    """Check the Independent1DFit class."""
     def setUp(self):
         self.poly1 = np.array([1.0, -2.0, 20.0])
         self.poly2 = np.array([1.0, 2.0, 10.0])
@@ -78,6 +80,7 @@ class Independent1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
 class Delaunay2DScatterFitTestCases(unittest.TestCase):
+    """Check the Delaunay2DScatterFit class."""
     
     def setUp(self):
         # Square diamond shape
@@ -102,7 +105,8 @@ class Delaunay2DScatterFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
 class Delaunay2DGridFitTestCases(unittest.TestCase):
-
+    """Check the Delaunay2DGridFit class."""
+    
     def setUp(self):
         # Training data is uniformly sampled parabola (make sure x and y ranges coincide)
         poly = np.array([1.0, 2.0, 1.0])
@@ -143,6 +147,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
 class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
+    """Check the NonLinearLeastSquaresFit class."""
     
     def setUp(self):
         # Quadratic function centred at p
@@ -178,7 +183,8 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(interp2.params, self.true_params2, decimal=10)
         np.testing.assert_almost_equal(y2, self.y2, decimal=10)
 
-class GaussianFitTestCases(unittest.TestCase):
+class GaussianFit2VarTestCases(unittest.TestCase):
+    """Check the GaussianFit class with different variances on each dimension."""
     
     def setUp(self):
         # For a more challenging fit, move the true mean away from the origin, i.e. away from the region
@@ -199,7 +205,27 @@ class GaussianFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(interp.height, self.true_height, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
 
+class GaussianFit1VarTestCases(unittest.TestCase):
+    """Check the GaussianFit class with a single variance on all dimensions."""
+    
+    def setUp(self):
+        self.true_mean, self.true_var, self.true_height = [0, 0], 10, 4
+        true_gauss = fitting.GaussianFit(self.true_mean, self.true_var, self.true_height)
+        self.x = 7*np.random.randn(80, 2)
+        self.y = true_gauss(self.x)
+        self.init_mean, self.init_var, self.init_height = [3, -2], 1, 1
+    
+    def test_fit_eval_diagcov(self):
+        interp = fitting.GaussianFit(self.init_mean, self.init_var, self.init_height)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        np.testing.assert_almost_equal(interp.mean, self.true_mean, decimal=7)
+        np.testing.assert_almost_equal(interp.var, self.true_var, decimal=6)
+        np.testing.assert_almost_equal(interp.height, self.true_height, decimal=7)
+        np.testing.assert_almost_equal(y, self.y, decimal=7)
+
 class Spline1DFitTestCases(unittest.TestCase):
+    """Check the Spline1DFit class."""
     
     def setUp(self):
         # Training data is randomly sampled parabola
@@ -220,6 +246,7 @@ class Spline1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
 
 class Spline2DScatterFitTestCases(unittest.TestCase):
+    """Check the Spline2DScatterFit class."""
     
     def setUp(self):
         # Training data is randomly sampled parabola
@@ -241,7 +268,8 @@ class Spline2DScatterFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
 
 class Spline2DGridFitTestCases(unittest.TestCase):
-
+    """Check the Spline2DGridFit class."""
+    
     def setUp(self):
         # Training data is randomly sampled parabola (but remember to keep data in ascending order)
         poly = np.array([1.0, 2.0, 1.0])
@@ -264,6 +292,7 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
 
 class RandomisedFitTestCases(unittest.TestCase):
+    """Check the randomisation of existing fits via RandomisedFit."""
     
     def setUp(self):
         self.poly = np.array([1.0, -2.0, 1.0])
@@ -292,15 +321,15 @@ class RandomisedFitTestCases(unittest.TestCase):
         noisy_poly = np.array(noisy_poly)
         # Randomise polynomial fit to first noisy sample in various ways
         # pylint: disable-msg=W0612
-        shuffle_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'shuffle').poly \
+        shuffle_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'shuffle').poly
                                  for n in range(self.num_runs)])
         np.testing.assert_almost_equal(shuffle_poly.mean(axis=0), noisy_poly[0], decimal=2)
         np.testing.assert_almost_equal(shuffle_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
-        normal_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'normal').poly \
+        normal_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'normal').poly
                                 for n in range(self.num_runs)])
         np.testing.assert_almost_equal(normal_poly.mean(axis=0), noisy_poly[0], decimal=2)
         np.testing.assert_almost_equal(normal_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
-        boot_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly \
+        boot_poly = np.array([fitting.randomise(interp, self.x, self.yNoisy[0], 'bootstrap').poly
                               for n in range(self.num_runs)])
         np.testing.assert_almost_equal(boot_poly.mean(axis=0), noisy_poly[0], decimal=2)
         np.testing.assert_almost_equal(boot_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)

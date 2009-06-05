@@ -1128,17 +1128,18 @@ class NonLinearLeastSquaresFit(ScatterFit):
 class GaussianFit(ScatterFit):
     """Fit Gaussian curve to multi-dimensional data.
     
-    This fits a D-dimensional Gaussian curve (with diagonal covariance matrix)
-    to x-y data. Don't confuse this with fitting a Gaussian pdf to random data!
-    The underlying optimiser is a modified Levenberg-Marquardt algorithm
-    (:func:`scipy.optimize.leastsq`).
+    This fits a D-dimensional Gaussian curve (with diagonal covariance matrix
+    or single scalar variance) to x-y data. Don't confuse this with fitting a
+    Gaussian pdf to random data! The underlying optimiser is a modified
+    Levenberg-Marquardt algorithm (:func:`scipy.optimize.leastsq`).
     
     Parameters
     ----------
     mean : array-like, shape (D,)
         Initial guess of D-dimensional mean vector
-    var : array-like, shape (D,)
-        Initial guess of D-dimensional vector of variances
+    var : array-like, shape (D,), or float
+        Initial guess of D-dimensional vector of variances, or a single variance
+        for all dimensions
     height : float
         Initial guess of height of Gaussian curve
     
@@ -1146,11 +1147,16 @@ class GaussianFit(ScatterFit):
     ---------
     mean : array-like, shape (D,)
         D-dimensional mean vector, either initial guess or final optimal value
-    var : array-like, shape (D,)
-        D-dimensional variance vector, either initial guess or final optimal
-        value
+    var : array-like, shape (D,), or float
+        D-dimensional variance vector or single variance, either initial guess
+        or final optimal value
     height : float
         Height of Gaussian curve, either initial guess or final optimal value
+    
+    Raises
+    ------
+    ValueError
+        If dimensions of mean and/or var are incompatible
     
     Notes
     -----
@@ -1163,28 +1169,42 @@ class GaussianFit(ScatterFit):
     """
     # pylint: disable-msg=W0612
     def __init__(self, mean, var, height):
-        # D-dimensional Gaussian curve with diagonal covariance matrix, in vectorised form
-        def gauss_diagcov(p, x):
-            dim = (len(p) - 1) // 2
-            x_min_mu = x - p[np.newaxis, 0:dim]
-            return p[2*dim] * np.exp(-0.5 * np.dot(x_min_mu * x_min_mu, p[dim:2*dim]))
-        # Jacobian of D-dimensional log Gaussian with diagonal covariance matrix, in vectorised form
-        def lngauss_diagcov_jac(p, x):
-            dim = (len(p) - 1) // 2
-            N = x.shape[0]
-            x_min_mu = x - p[np.newaxis, 0:dim]
-            df_dmu = x_min_mu * p[np.newaxis, dim:2*dim]
-            df_dsigma = -0.5 * x_min_mu * x_min_mu
-            df_dheight = np.ones((N, 1))
-            return np.hstack((df_dmu, df_dsigma, df_dheight))
         ScatterFit.__init__(self)
         self.mean = np.atleast_1d(np.asarray(mean))
         self.var = np.atleast_1d(np.asarray(var))
-        if (len(self.mean.shape) != 1) or (len(self.var.shape) != 1) or (self.mean.shape != self.var.shape):
-            raise ValueError("Dimensions of mean and/or variance incorrect (should be rank-1 and the same).")
+        if (len(self.mean.shape) != 1) or (len(self.var.shape) != 1) or \
+           (self.var.shape not in [self.mean.shape, (1,)]):
+            raise ValueError("Dimensions of mean and/or variance incorrect")
         self.height = height
-        # Create parameter vector for optimisation
-        params = np.concatenate((self.mean, 1.0 / self.var, [self.height]))
+        # Make sure a single variance is a plain scalar, and create parameter vector for optimisation
+        if self.var.shape == (1,):
+            self.var = self.var[0]
+            params = np.concatenate((self.mean, [self.height, 1.0 / self.var]))
+        else:
+            params = np.concatenate((self.mean, [self.height], 1.0 / self.var))
+        # D-dimensional Gaussian curve with diagonal covariance matrix, in vectorised form
+        def gauss_diagcov(p, x):
+            D = x.shape[1]
+            x_min_mu = x - p[np.newaxis, :D]
+            if len(p) == D + 2:
+                ivar = np.tile(p[D + 1], D)
+            else:
+                ivar = p[D + 1:]
+            return p[D] * np.exp(-0.5 * np.dot(x_min_mu * x_min_mu, ivar))
+        # Jacobian of D-dimensional log Gaussian with diagonal covariance matrix, in vectorised form
+        def lngauss_diagcov_jac(p, x):
+            N, D = x.shape
+            x_min_mu = x - p[np.newaxis, :D]
+            if len(p) == D + 2:
+                ivar = np.tile(p[D + 1], D)
+            else:
+                ivar = p[D + 1:]
+            df_dmu = x_min_mu * ivar[np.newaxis, :]
+            df_dsigma = -0.5 * x_min_mu * x_min_mu
+            if len(p) == D + 2:
+                df_dsigma = df_dsigma.mean(axis=1)
+            df_dheight = np.ones((N, 1))
+            return np.hstack((df_dmu, df_dsigma, df_dheight))
         # Jacobian not working yet...
 #        self._interp = NonLinearLeastSquaresFit(lngauss_diagcov, params, lngauss_diagcov_jac, method='leastsq')
         # Internal non-linear least squares fitter
@@ -1206,10 +1226,13 @@ class GaussianFit(ScatterFit):
         """
         self._interp.fit(x, y)
         # Recreate Gaussian parameters
-        dim = len(self.mean)
-        self.mean = self._interp.params[0:dim]
-        self.var = 1.0 / self._interp.params[dim:2*dim]
-        self.height = self._interp.params[2*dim]
+        D = len(self.mean)
+        self.mean = self._interp.params[:D]
+        self.height = self._interp.params[D]
+        if len(self._interp.params) == D + 2:
+            self.var = 1.0 / self._interp.params[D + 1]
+        else:
+            self.var = 1.0 / self._interp.params[D + 1:]
     
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
