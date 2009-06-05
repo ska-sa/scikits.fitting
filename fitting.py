@@ -1191,22 +1191,6 @@ class GaussianFit(ScatterFit):
             else:
                 ivar = p[D + 1:]
             return p[D] * np.exp(-0.5 * np.dot(x_min_mu * x_min_mu, ivar))
-        # Jacobian of D-dimensional log Gaussian with diagonal covariance matrix, in vectorised form
-        def lngauss_diagcov_jac(p, x):
-            N, D = x.shape
-            x_min_mu = x - p[np.newaxis, :D]
-            if len(p) == D + 2:
-                ivar = np.tile(p[D + 1], D)
-            else:
-                ivar = p[D + 1:]
-            df_dmu = x_min_mu * ivar[np.newaxis, :]
-            df_dsigma = -0.5 * x_min_mu * x_min_mu
-            if len(p) == D + 2:
-                df_dsigma = df_dsigma.mean(axis=1)
-            df_dheight = np.ones((N, 1))
-            return np.hstack((df_dmu, df_dsigma, df_dheight))
-        # Jacobian not working yet...
-#        self._interp = NonLinearLeastSquaresFit(lngauss_diagcov, params, lngauss_diagcov_jac, method='leastsq')
         # Internal non-linear least squares fitter
         self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params, method='leastsq')
     
