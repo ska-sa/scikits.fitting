@@ -560,8 +560,9 @@ class Polynomial2DFit(ScatterFit):
         the elements of each input vector in *x* are *x_0* and *x_1*,
         respectively, the row takes the form::
             
-            [x_0 * x_1 ^ 2, x_0 * x_1, x_0 * 1, 1 * x_1 ^ 2, 1 * x_1, 1 * 1]
-            or [x_0 * x_1 ^ 2, x_0 * x_1, x_0, x_1 ^ 2, x_1, 1]
+            outer([x_0, 1], [x1 ^ 2, x1, 1])
+            = [x_0 * x_1 ^ 2, x_0 * x_1, x_0 * 1, 1 * x_1 ^ 2, 1 * x_1, 1 * 1]
+            = [x_0 * x_1 ^ 2, x_0 * x_1, x_0, x_1 ^ 2, x_1, 1]
         
         This is closely related to the Vandermonde matrix of *x*.
         
