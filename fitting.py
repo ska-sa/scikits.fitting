@@ -76,7 +76,7 @@ except ImportError:
         delaunay_found = True
     except ImportError:
         delaunay_found = False
-import scipy.interpolate as dierckx         # Spline1DFit, Spline2DScatterFit, Spline2DGridFit
+import scipy.interpolate    # Spline1DFit, Spline2DScatterFit, Spline2DGridFit, RbfScatterFit
 import numpy as np
 import copy
 import logging
@@ -711,7 +711,7 @@ class Independent1DFit(ScatterFit):
         x = np.atleast_1d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
         if self._axis >= len(y.shape):
-            raise ValueError, "Provided y-array does not have the specified axis " + str(self._axis) + "."
+            raise ValueError, "Provided y-array does not have the specified axis " + str(self._axis)
         if y.shape[self._axis] != len(x):
             raise ValueError, "Number of elements in x and along specified axis of y differ."
         # Shape of array of interpolators (same shape as y, but without 'independent' specified axis)
@@ -829,7 +829,7 @@ class Delaunay2DScatterFit(ScatterFit):
         y = np.atleast_1d(np.asarray(y))
         if (len(x.shape) != 2) or (x.shape[0] != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
             raise ValueError("Delaunay interpolator requires input data with shape (2, N) and output data with " +
-                             " shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
+                             "shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
         if self.jitter:
             x = x + 0.00001 * x.std(axis=1)[:, np.newaxis] * np.random.standard_normal(x.shape)
         tri = delaunay.Triangulation(x[0], x[1])
@@ -926,7 +926,7 @@ class Delaunay2DGridFit(GridFit):
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1) or (len(y.shape) != 2) or \
            (y.shape[0] != len(x[0])) or (y.shape[1] != len(x[1])):
             raise ValueError("Delaunay interpolator requires input data with shape [(M,), (N,)] " +
-                             " and output data with shape (M, N), got " + str([ax.shape for ax in x]) +
+                             "and output data with shape (M, N), got " + str([ax.shape for ax in x]) +
                              " and " + str(y.shape) + " instead.")
         if (x[0][0] != x[1][0]) or (x[0][-1] != x[1][-1]):
             logger.warning("The first and last values of x[0] and x[1] do not match up, " +
@@ -1238,9 +1238,9 @@ class GaussianFit(ScatterFit):
 class Spline1DFit(ScatterFit):
     """Fit a B-spline to 1-D data.
     
-    This uses :mod:`scipy.interpolate`, which is based on Paul Dierckx's
-    DIERCKX (or FITPACK) routines (specifically ``curfit`` for fitting and
-    ``splev`` for evaluation).
+    This uses the spline classes in :mod:`scipy.interpolate`, which is based on
+    Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``curfit``
+    for fitting and ``splev`` for evaluation).
     
     Parameters
     ----------
@@ -1262,7 +1262,7 @@ class Spline1DFit(ScatterFit):
         self.degree = degree
         try:
             # Underlying spline class
-            self._spline_class = dierckx.__dict__[method]
+            self._spline_class = scipy.interpolate.__dict__[method]
         except KeyError:
             raise KeyError('Spline class "' + method + '" unknown - should be one of: ' +
                            ' '.join([name for name in dierckx.__dict__.iterkeys()
@@ -1324,12 +1324,12 @@ class Spline1DFit(ScatterFit):
 #----------------------------------------------------------------------------------------------------------------------
 
 class Spline2DScatterFit(ScatterFit):
-    """Fits a B-spline to scattered 2-D data.
+    """Fit a B-spline to scattered 2-D data.
     
-    This uses :mod:`scipy.interpolate`, which is based on Paul Dierckx's DIERCKX
-    (or FITPACK) routines (specifically ``surfit`` for fitting and ``bispev``
-    for evaluation). The 2-D ``x`` coordinates do not have to lie on a regular
-    grid, and can be in any order.
+    This uses the spline classes in :mod:`scipy.interpolate`, which is based on
+    Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``surfit`` for
+    fitting and ``bispev`` for evaluation). The 2-D ``x`` coordinates do not
+    have to lie on a regular grid, and can be in any order.
     
     Parameters
     ----------
@@ -1352,7 +1352,7 @@ class Spline2DScatterFit(ScatterFit):
         self.degree = degree
         try:
             # Underlying spline class
-            self._spline_class = dierckx.__dict__[method]
+            self._spline_class = scipy.interpolate.__dict__[method]
         except KeyError:
             raise KeyError('Spline class "' + method + r'" unknown - should be one of: ' +
                            ' '.join([name for name in dierckx.__dict__.iterkeys()
@@ -1384,7 +1384,7 @@ class Spline2DScatterFit(ScatterFit):
         y = np.atleast_1d(np.asarray(y))
         if (len(x.shape) != 2) or (x.shape[0] != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
             raise ValueError("Spline interpolator requires input data with shape (2, N) and output data with " +
-                              " shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
+                              "shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError("Not enough data points for spline fit: requires at least " +
                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size))
@@ -1420,13 +1420,13 @@ class Spline2DScatterFit(ScatterFit):
 #----------------------------------------------------------------------------------------------------------------------
 
 class Spline2DGridFit(GridFit):
-    """Fits a B-spline to 2-D data on a rectangular grid.
+    """Fit a B-spline to 2-D data on a rectangular grid.
     
-    This uses :mod:`scipy.interpolate`, which is based on Paul Dierckx's DIERCKX
-    (or FITPACK) routines (specifically ``regrid`` for fitting and ``bispev``
-    for evaluation). The 2-D ``x`` coordinates define a rectangular grid.
-    They do not have to be in ascending order, as both the fitting and
-    evaluation routines sort them for you.
+    This uses the spline classes in :mod:`scipy.interpolate`, which is based on
+    Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``regrid`` for
+    fitting and ``bispev`` for evaluation). The 2-D ``x`` coordinates define a
+    rectangular grid. They do not have to be in ascending order, as both the
+    fitting and evaluation routines sort them for you.
     
     Parameters
     ----------
@@ -1443,7 +1443,7 @@ class Spline2DGridFit(GridFit):
         self.degree = degree
         try:
             # Underlying spline class
-            self._spline_class = dierckx.__dict__[method]
+            self._spline_class = scipy.interpolate.__dict__[method]
         except KeyError:
             raise KeyError('Spline class "' + method + r'" unknown - should be one of: ' +
                            ' '.join([name for name in dierckx.__dict__.iterkeys()
@@ -1477,7 +1477,7 @@ class Spline2DGridFit(GridFit):
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1) or (len(y.shape) != 2) or \
            (y.shape[0] != len(x[0])) or (y.shape[1] != len(x[1])):
             raise ValueError("Spline interpolator requires input data with shape [(M,), (N,)] " +
-                             " and output data with shape (M, N), got " + str([ax.shape for ax in x]) +
+                             "and output data with shape (M, N), got " + str([ax.shape for ax in x]) +
                              " and " + str(y.shape) + " instead.")
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError("Not enough data points for spline fit: requires at least " +
@@ -1516,6 +1516,75 @@ class Spline2DGridFit(GridFit):
         # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid in ascending order
         # Therefore, sort coordinates, evaluate on the sorted grid, and return the desorted result
         return desort_grid(x[0], x[1], self._interp(sorted(x[0]), sorted(x[1])))
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  RbfScatterFit
+#----------------------------------------------------------------------------------------------------------------------
+
+class RbfScatterFit(ScatterFit):
+    """Do radial basis function (RBF) interpolation of scattered multi-dimensional data.
+    
+    This uses the :class:`scipy.interpolate.Rbf` class. The D-dimensional ``x``
+    coordinates do not have to lie on a regular grid, and can be in any order.
+    
+    Parameters
+    ----------
+    kwargs : dict, optional
+        Additional keyword arguments are passed to underlying Rbf class
+    
+    """
+    def __init__(self, **kwargs):
+        ScatterFit.__init__(self)
+        # Extra keyword arguments to Rbf class
+        self._extra_args = kwargs
+        # Interpolator function, only set after :func:`fit`
+        self._interp = None
+    
+    def fit(self, x, y):
+        """Fit RBF to D-dimensional scattered data in unstructured form.
+        
+        The D-dimensional *x* coordinates do not have to lie on a regular grid,
+        and can be in any order.
+        
+        Parameters
+        ----------
+        x : array-like, shape (D, N)
+            Known input values as a numpy array or sequence
+        y : array-like, shape (N,)
+            Known output values as a 1-D numpy array or sequence
+        
+        """
+        # Check dimensions of known data
+        x = np.atleast_2d(np.asarray(x))
+        y = np.atleast_1d(np.asarray(y))
+        if (len(x.shape) != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
+            raise ValueError("RBF interpolator requires input data with shape (D, N) and output data with " +
+                             "shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
+        self._interp = scipy.interpolate.Rbf(*np.vstack((x, y)), **self._extra_args)
+    
+    def __call__(self, x):
+        """Evaluate RBF on new scattered data.
+        
+        Parameters
+        ----------
+        x : array-like, shape (D, M)
+            Input to function as a numpy array or sequence
+        
+        Returns
+        -------
+        y : array, shape (M,)
+            Output of function as a 1-D numpy array
+        
+        """
+        # Check dimensions
+        x = np.atleast_2d(np.asarray(x))
+        if (len(x.shape) != 2):
+            raise ValueError("RBF interpolator requires input data with shape (D,N), got " +
+                             str(x.shape) + " instead.")
+        if self._interp == None:
+            raise AttributeError("RBF not fitted to data yet - first call 'fit'.")
+        # Loop over individual data points, as underlying bispev routine expects regular grid in x
+        return self._interp(*x)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  SampledTemplateFit

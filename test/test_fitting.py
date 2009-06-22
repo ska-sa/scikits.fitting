@@ -291,6 +291,27 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=10)
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
 
+class RbfScatterFitTestCases(unittest.TestCase):
+    """Check the RbfScatterFit class."""
+    
+    def setUp(self):
+        # Square diamond shape
+        self.x = np.array([[-1, 0, 0, 0, 1], [0, -1, 0, 1, 0]])
+        self.y = np.array([1, 1, 1, 1, 1])
+        self.testx = np.array([[-0.5, 0, 0.5, 0], [0, -0.5, 0.5, 0]])
+        self.testy = np.array([1, 1, 1, 1])
+    
+    def test_fit_eval_nn(self):
+        interp = fitting.RbfScatterFit()
+        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        np.testing.assert_almost_equal(y, self.y, decimal=10)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=10)
+
 class RandomisedFitTestCases(unittest.TestCase):
     """Check the randomisation of existing fits via RandomisedFit."""
     
