@@ -308,9 +308,8 @@ class RbfScatterFitTestCases(unittest.TestCase):
         interp.fit(self.x, self.y)
         y = interp(self.x)
         testy = interp(self.testx)
-        outsidey = interp(self.outsidex)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
-        np.testing.assert_almost_equal(testy, self.testy, decimal=10)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=2)
 
 class RandomisedFitTestCases(unittest.TestCase):
     """Check the randomisation of existing fits via RandomisedFit."""

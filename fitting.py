@@ -62,7 +62,12 @@ Helper functions
 
 """
 
-import scipy.optimize as optimize           # NonLinearLeastSquaresFit
+import copy
+import logging
+
+import numpy as np
+import scipy.optimize       # NonLinearLeastSquaresFit
+import scipy.interpolate    # Spline1DFit, Spline2DScatterFit, Spline2DGridFit, RbfScatterFit
 # Since scipy 0.7.0 the delaunay module lives in scikits
 try:
     # pylint: disable-msg=E0611
@@ -76,10 +81,6 @@ except ImportError:
         delaunay_found = True
     except ImportError:
         delaunay_found = False
-import scipy.interpolate    # Spline1DFit, Spline2DScatterFit, Spline2DGridFit, RbfScatterFit
-import numpy as np
-import copy
-import logging
 
 logger = logging.getLogger("scape.fitting")
 
@@ -1026,7 +1027,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
         self.initial_params = initial_params
         self.func_jacobian = func_jacobian
         try:
-            self._optimizer = optimize.__dict__[method]
+            self._optimizer = scipy.optimize.__dict__[method]
         except KeyError:
             raise KeyError('Optimisation method "' + method + '" unknown - should be one of: ' +
                            'anneal fmin fmin_bfgs fmin_cg fmin_l_bfgs_b fmin_powell fmin_tnc leastsq')
@@ -1583,7 +1584,6 @@ class RbfScatterFit(ScatterFit):
                              str(x.shape) + " instead.")
         if self._interp == None:
             raise AttributeError("RBF not fitted to data yet - first call 'fit'.")
-        # Loop over individual data points, as underlying bispev routine expects regular grid in x
         return self._interp(*x)
 
 #----------------------------------------------------------------------------------------------------------------------
