@@ -1536,6 +1536,10 @@ class RbfScatterFit(ScatterFit):
     """
     def __init__(self, **kwargs):
         ScatterFit.__init__(self)
+        try:
+            scipy.interpolate.Rbf
+        except AttributeError:
+            raise ImportError("scipy.interpolate.Rbf class not found - you need SciPy 0.7.0 or newer")
         # Extra keyword arguments to Rbf class
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`

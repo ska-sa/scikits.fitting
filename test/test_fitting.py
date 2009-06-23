@@ -292,7 +292,7 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(testy, self.testy, decimal=10)
 
 class RbfScatterFitTestCases(unittest.TestCase):
-    """Check the RbfScatterFit class."""
+    """Check the RbfScatterFit class (only if Rbf is installed in SciPy)."""
     
     def setUp(self):
         # Square diamond shape
@@ -301,8 +301,11 @@ class RbfScatterFitTestCases(unittest.TestCase):
         self.testx = np.array([[-0.5, 0, 0.5, 0], [0, -0.5, 0.5, 0]])
         self.testy = np.array([1, 1, 1, 1])
     
-    def test_fit_eval_nn(self):
-        interp = fitting.RbfScatterFit()
+    def test_fit_eval(self):
+        try:
+            interp = fitting.RbfScatterFit()
+        except ImportError:
+            return
         self.assertRaises(AttributeError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
