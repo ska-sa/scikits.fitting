@@ -1266,7 +1266,7 @@ class Spline1DFit(ScatterFit):
             self._spline_class = scipy.interpolate.__dict__[method]
         except KeyError:
             raise KeyError('Spline class "' + method + '" unknown - should be one of: ' +
-                           ' '.join([name for name in dierckx.__dict__.iterkeys()
+                           ' '.join([name for name in scipy.interpolate.__dict__.iterkeys()
                                      if name.find('UnivariateSpline') >= 0]))
         # Standard deviation of y
         self._std_y = std_y
@@ -1356,7 +1356,7 @@ class Spline2DScatterFit(ScatterFit):
             self._spline_class = scipy.interpolate.__dict__[method]
         except KeyError:
             raise KeyError('Spline class "' + method + r'" unknown - should be one of: ' +
-                           ' '.join([name for name in dierckx.__dict__.iterkeys()
+                           ' '.join([name for name in scipy.interpolate.__dict__.iterkeys()
                                      if name.find('BivariateSpline') >= 0]))
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
@@ -1447,7 +1447,7 @@ class Spline2DGridFit(GridFit):
             self._spline_class = scipy.interpolate.__dict__[method]
         except KeyError:
             raise KeyError('Spline class "' + method + r'" unknown - should be one of: ' +
-                           ' '.join([name for name in dierckx.__dict__.iterkeys()
+                           ' '.join([name for name in scipy.interpolate.__dict__.iterkeys()
                                      if name.find('BivariateSpline') >= 0]))
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
