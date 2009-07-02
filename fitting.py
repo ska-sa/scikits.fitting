@@ -833,7 +833,12 @@ class Delaunay2DScatterFit(ScatterFit):
                              "shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
         if self.jitter:
             x = x + 0.00001 * x.std(axis=1)[:, np.newaxis] * np.random.standard_normal(x.shape)
-        tri = delaunay.Triangulation(x[0], x[1])
+        try:
+            tri = delaunay.Triangulation(x[0], x[1])
+        # This triangulation package is not very robust - in case of error, try once more, with fresh jitter
+        except KeyError:
+            x = x + 0.00001 * x.std(axis=1)[:, np.newaxis] * np.random.standard_normal(x.shape)
+            tri = delaunay.Triangulation(x[0], x[1])
         if self.interp_type == 'nn':
             self._interp = tri.nn_interpolator(y, default_value=self.default_val)
     
