@@ -80,7 +80,13 @@ except ImportError:
         import scipy.sandbox.delaunay as delaunay
         delaunay_found = True
     except ImportError:
-        delaunay_found = False
+        # Matplotlib also has delaunay module these days - use as last resort (more convenient than scikits)
+        try:
+            # pylint: disable-msg=E0611,F0401
+            import matplotlib.delaunay as delaunay
+            delaunay_found = True
+        except ImportError:
+            delaunay_found = False
 
 logger = logging.getLogger("scape.fitting")
 
