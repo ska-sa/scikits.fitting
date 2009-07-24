@@ -97,7 +97,7 @@ logger = logging.getLogger("scape.fitting")
 
 def squash(x, flatten_axes, move_to_start=True):
     """Flatten array, but not necessarily all the way to a 1-D array.
-    
+
     This helper function is useful for broadcasting functions of arbitrary
     dimensionality along a given array. The array x is transposed and reshaped,
     so that the axes with indices listed in *flatten_axes* are collected either
@@ -109,7 +109,7 @@ def squash(x, flatten_axes, move_to_start=True):
     ``flatten_axes = []`` or None, which results in the original array with no
     flattening, and ``flatten_axes = range(len(x.shape))``, which is equivalent
     to ``x.ravel()`` and therefore full flattening.
-    
+
     Parameters
     ----------
     x : array-like
@@ -118,12 +118,12 @@ def squash(x, flatten_axes, move_to_start=True):
         List of axes along which *x* should be flattened
     move_to_start : bool, optional
         Flag indicating whether flattened axis is moved to start or end of array
-    
+
     Returns
     -------
     y : array
         Semi-flattened version of *x*, as numpy array
-    
+
     Examples
     --------
     >>> import numpy as np
@@ -142,7 +142,7 @@ def squash(x, flatten_axes, move_to_start=True):
     >>> # same as x.ravel():
     >>> squash(x, (0, 1, 2), True).shape
     (80,)
-    
+
     """
     x = np.asarray(x)
     x_shape = np.atleast_1d(np.asarray(x.shape))
@@ -165,7 +165,7 @@ def squash(x, flatten_axes, move_to_start=True):
 
 def unsquash(x, flatten_axes, original_shape, move_from_start=True):
     """Restore an array that was reshaped by :func:`squash`.
-    
+
     Parameters
     ----------
     x : array-like
@@ -176,12 +176,12 @@ def unsquash(x, flatten_axes, original_shape, move_from_start=True):
         Original shape of *x*, before flattening
     move_from_start : bool, optional
         Flag indicating whether flattened axes were moved to start or end of array
-    
+
     Returns
     -------
     y : array, shape *original_shape*
         Restored version of *x*, as numpy array
-    
+
     """
     x = np.asarray(x)
     original_shape = np.atleast_1d(np.asarray(original_shape))
@@ -205,7 +205,7 @@ def unsquash(x, flatten_axes, original_shape, move_from_start=True):
 
 def sort_grid(x, y, z):
     """Ensure that the coordinates of a rectangular grid are in ascending order.
-    
+
     Parameters
     ----------
     x : array, shape (M,)
@@ -214,7 +214,7 @@ def sort_grid(x, y, z):
         1-D array of y coordinates, in any order
     z : array, shape (M, N)
         2-D array of values which correspond to the coordinates in *x* and *y*
-    
+
     Returns
     -------
     xx : array, shape (M,)
@@ -223,7 +223,7 @@ def sort_grid(x, y, z):
         1-D array of y coordinates, in ascending order
     zz : array, shape (M, N)
         2-D array of values which correspond to the coordinates in *xx* and *yy*
-    
+
     """
     xInd = np.argsort(x)
     yInd = np.argsort(y)
@@ -231,10 +231,10 @@ def sort_grid(x, y, z):
 
 def desort_grid(x, y, z):
     """Undo the effect of :func:`sort_grid`.
-    
+
     This shuffles a rectangular grid of values (based on ascending coordinates)
     to correspond to the original order.
-    
+
     Parameters
     ----------
     x : array, shape (M,)
@@ -243,12 +243,12 @@ def desort_grid(x, y, z):
         1-D array of y coordinates, in the original (possibly unsorted) order
     z : array, shape (M, N)
         2-D array of values which correspond to sorted (x, y) coordinates
-    
+
     Returns
     -------
     zz : array, shape (M, N)
         2-D array of values which correspond to original coordinates in x and y
-    
+
     """
     x_ind = np.argsort(np.argsort(x))
     y_ind = np.argsort(np.argsort(y))
@@ -256,22 +256,22 @@ def desort_grid(x, y, z):
 
 def vectorize_fit_func(func):
     """Factory that creates vectorised version of function to be fitted to data.
-    
+
     This takes functions of the form ``y = f(p, x)`` which cannot handle
     sequences of input arrays for ``x``, and wraps it in a loop which calls
     ``f`` with the elements of the sequence of ``x`` values, and returns the
     corresponding sequence.
-    
+
     Parameters
     ----------
     func : function, signature ``y = f(p, x)``
         Function ``f(p, x)`` to be vectorised along input ``x``
-    
+
     Returns
     -------
     vec_func : function
         Vectorised version of function
-    
+
     """
     def vec_func(p, x):
         return np.array([func(p, xx) for xx in x])
@@ -279,12 +279,12 @@ def vectorize_fit_func(func):
 
 def randomise(interp, x, y, method='shuffle'):
     """Randomise fitted function parameters by resampling residuals.
-    
+
     This allows estimation of the sampling distribution of the parameters of a
     fitted function, by repeatedly running this method and collecting the
     statistics (e.g. variance) of the parameters of the resulting interpolator
     object. Alternatively, it can form part of a bigger Monte Carlo run.
-    
+
     The method assumes that the interpolator has already been fit to data. It
     obtains the residuals ``r = y - f(x)``, and resamples them to form ``r*``
     according to the specified method. The final step re-fits the interpolator
@@ -292,13 +292,13 @@ def randomise(interp, x, y, method='shuffle'):
     estimate of the function parameters every time the method is called.
     The method is therefore non-deterministic. Three resampling methods are
     supported:
-    
+
     - 'shuffle': permute the residuals (sample from the residuals without
       replacement)
     - 'normal': replace the residuals with zero-mean Gaussian noise with the
       same variance
     - 'bootstrap': sample from the existing residuals, with replacement
-    
+
     Parameters
     ----------
     interp : object
@@ -311,12 +311,12 @@ def randomise(interp, x, y, method='shuffle'):
         function was originally fitted)
     method : {'shuffle', 'normal', 'bootstrap'}, optional
         Resampling technique used to resample residuals
-    
+
     Returns
     -------
     random_interp : object
         Randomised interpolator object
-    
+
     """
     # Make copy to prevent destruction of original interpolator
     random_interp = copy.deepcopy(interp)
@@ -340,7 +340,7 @@ def randomise(interp, x, y, method='shuffle'):
 
 class ScatterFit(object):
     """Interface for interpolators that operate on scattered data (not on grid).
-    
+
     This defines the interface for interpolator functions that operate on
     unstructured scattered input data (i.e. not on a grid). The input data
     consists of a sequence of ``x`` coordinates and a sequence of corresponding
@@ -348,44 +348,44 @@ class ScatterFit(object):
     their location can be arbitrary. The ``x`` coordinates can have an
     arbritrary dimension (although most classes are specialised for 1-D or 2-D
     data).
-    
+
     The initialiser should be used to specify parameters of the interpolator
     function, such as polynomial degree.
-    
+
     """
     def __init__(self):
         pass
-    
-    
+
+
     def fit(self, x, y):
         """Fit function ``y = f(x)`` to data.
-        
+
         This function should reset any state associated with previous ``(x, y)``
         data fits, and preserve all state that was set by the initialiser.
-        
+
         Parameters
         ----------
         x : array
             Known input values as a numpy array (order does not matter)
         y : array
             Known output values as a numpy array
-        
+
         """
         raise NotImplementedError
-    
+
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
-        
+
         Parameters
         ----------
         x : array
             Input to function as a numpy array (order does not matter)
-        
+
         Returns
         -------
         y : array
             Output of function as a numpy array
-        
+
         """
         raise NotImplementedError
 
@@ -395,7 +395,7 @@ class ScatterFit(object):
 
 class GridFit(object):
     """Interface for interpolators that operate on data on a grid.
-    
+
     This defines the interface for interpolator functions that operate on input
     data that lie on a grid. The input data consists of a sequence of x-axis
     tick sequences and the corresponding array of y data. The shape of this
@@ -403,20 +403,20 @@ class GridFit(object):
     The axis tick sequences are assumed to be in ascending order. The ``x``
     sequence can contain an arbitrary number of axes (although most classes are
     specialised for 1-D or 2-D data).
-    
+
     The initialiser should be used to specify parameters of the interpolator
     function, such as polynomial degree.
-    
+
     """
     def __init__(self):
         pass
-    
+
     def fit(self, x, y):
         """Fit function ``y = f(x)`` to data.
-        
+
         This function should reset any state associated with previous ``(x, y)``
         data fits, and preserve all state that was set by the initialiser.
-        
+
         Parameters
         ----------
         x : array
@@ -424,24 +424,24 @@ class GridFit(object):
             (each in ascending order)
         y : array
             Known output values as a numpy array
-        
+
         """
         raise NotImplementedError
-    
+
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
-        
+
         Parameters
         ----------
         x : array
             Input to function as a sequence of numpy arrays
             (each in ascending order)
-        
+
         Returns
         -------
         y : array
             Output of function as a numpy array
-        
+
         """
         raise NotImplementedError
 
@@ -451,9 +451,9 @@ class GridFit(object):
 
 class Polynomial1DFit(ScatterFit):
     """Fit polynomial to 1-D data.
-    
+
     This uses numpy's polyfit and polyval.
-    
+
     Parameters
     ----------
     max_degree : int
@@ -462,12 +462,12 @@ class Polynomial1DFit(ScatterFit):
     rcond : float, optional
         Relative condition number of fit (smallest singular value that will be
         used to fit polynomial, has sensible default)
-    
+
     Arguments
     ---------
     poly : real array
         Polynomial coefficients (highest order first), only set after :func:`fit`
-    
+
     """
     def __init__(self, max_degree, rcond=None):
         ScatterFit.__init__(self)
@@ -476,17 +476,17 @@ class Polynomial1DFit(ScatterFit):
         # Mean of input data, only set after :func:`fit`
         self._mean = None
         self.poly = None
-    
+
     def fit(self, x, y):
         """Fit polynomial to data.
-        
+
         Parameters
         ----------
         x : array-like, shape (N,)
             Known input values as a 1-D numpy array or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
-        
+
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
         x = np.atleast_1d(np.array(x, dtype='double'))
@@ -495,20 +495,20 @@ class Polynomial1DFit(ScatterFit):
         self._mean = x.mean()
         # Reduce polynomial degree if there is not enough points to fit (degree should be < len(x))
         self.poly = np.polyfit(x - self._mean, y, min((self.max_degree, len(x)-1)), rcond = self._rcond)
-    
+
     def __call__(self, x):
         """Evaluate polynomial on new data.
-        
+
         Parameters
         ----------
         x : array-like, shape (M,)
             Input to function as a 1-D numpy array, or sequence
-        
+
         Returns
         -------
         y : array, shape (M,)
             Output of function as a 1-D numpy array
-        
+
         """
         if (self.poly == None) or (self._mean == None):
             raise AttributeError, "Polynomial not fitted to data yet - first call 'fit'."
@@ -521,20 +521,20 @@ class Polynomial1DFit(ScatterFit):
 
 class Polynomial2DFit(ScatterFit):
     """Fit polynomial to 2-D data.
-    
+
     This extends :func:`numpy.polyfit` and :func:`numpy.polyval` to 2 dimensions.
     The 2-D polynomial has (degrees[0] + 1) * (degrees[1] + 1) coefficients.
-    
+
     Parameters
     ----------
     degrees : list of 2 ints
         Non-negative polynomial degree to use for each dimension of *x*
-    
+
     Arguments
     ---------
     poly : real array, shape ((degrees[0] + 1) * (degrees[1] + 1),)
         Polynomial coefficients (highest order first), only set after :func:`fit`
-    
+
     """
     def __init__(self, degrees):
         ScatterFit.__init__(self)
@@ -543,20 +543,20 @@ class Polynomial2DFit(ScatterFit):
         self._mean = None
         self._scale = None
         self.poly = None
-    
+
     def _regressor(self, x):
         """Form normalised regressor matrix from set of input vectors.
-        
+
         Parameters
         ----------
         x : array, shape (2, M)
             Input to function as a 2-D numpy array
-        
+
         Returns
         -------
         X : array, shape (M, (degrees[0] + 1) * (degrees[1] + 1))
             Regressor matrix
-        
+
         Notes
         -----
         This normalises the 2-D input vectors by centering and scaling them.
@@ -566,33 +566,33 @@ class Polynomial2DFit(ScatterFit):
         decreasing polynomial order. For example, if *degrees* is (1, 2) and
         the elements of each input vector in *x* are *x_0* and *x_1*,
         respectively, the row takes the form::
-            
+
             outer([x_0, 1], [x1 ^ 2, x1, 1])
             = [x_0 * x_1 ^ 2, x_0 * x_1, x_0 * 1, 1 * x_1 ^ 2, 1 * x_1, 1 * 1]
             = [x_0 * x_1 ^ 2, x_0 * x_1, x_0, x_1 ^ 2, x_1, 1]
-        
+
         This is closely related to the Vandermonde matrix of *x*.
-        
+
         """
         x_norm = (x - self._mean[:, np.newaxis]) / self._scale[:, np.newaxis]
         v1 = np.vander(x_norm[0], self.degrees[0] + 1)
         v2 = np.vander(x_norm[1], self.degrees[1] + 1)
         return np.hstack([v1[:, n][:, np.newaxis] * v2 for n in xrange(v1.shape[1])])
-    
+
     def fit(self, x, y):
         """Fit polynomial to data.
-        
+
         This fits a polynomial defined on 2-D data to the provided (x, y)
         pairs. The 2-D *x* coordinates do not have to lie on a regular grid,
         and can be in any order.
-        
+
         Parameters
         ----------
         x : array-like, shape (2, N)
             Known input values as a 2-D numpy array, or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
-        
+
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
         x = np.atleast_2d(np.array(x, dtype='double'))
@@ -607,20 +607,20 @@ class Polynomial2DFit(ScatterFit):
         if rank != len(poly):
             logger.warning('Polynomial fit may be poorly conditioned')
         self.poly = poly
-    
+
     def __call__(self, x):
         """Evaluate polynomial on new data.
-        
+
         Parameters
         ----------
         x : array-like, shape (2, M)
             Input to function as a 2-D numpy array, or sequence
-        
+
         Returns
         -------
         y : array, shape (M,)
             Output of function as a 1-D numpy array
-        
+
         """
         if (self.poly == None) or (self._mean == None):
             raise AttributeError("Polynomial not fitted to data yet - first call 'fit'.")
@@ -633,47 +633,47 @@ class Polynomial2DFit(ScatterFit):
 
 class ReciprocalFit(ScatterFit):
     """Interpolate the reciprocal of data.
-    
+
     This allows any ScatterFit object to fit the reciprocal of a data set,
     without having to invert the data and the results explicitly.
-    
+
     Parameters
     ----------
     interp : object
         ScatterFit object to use on the reciprocal of the data
-    
+
     """
     def __init__(self, interp):
         ScatterFit.__init__(self)
         self._interp = copy.deepcopy(interp)
-    
+
     def fit(self, x, y):
         """Fit stored interpolator to reciprocal of data, i.e. fit function ``1/y = f(x)``.
-        
+
         Parameters
         ----------
         x : array
             Known input values as a numpy array
         y : array
             Known output values as a numpy array
-        
+
         """
         y = np.asarray(y)
         self._interp.fit(x, 1.0 / y)
-    
+
     def __call__(self, x):
         """Evaluate function ``1/f(x)`` on new data, where f is interpolated from previous data.
-        
+
         Parameters
         ----------
         x : array
             Input to function as a numpy array
-        
+
         Returns
         -------
         y : array
             Output of function as a numpy array
-        
+
         """
         return 1.0 / self._interp(x)
 
@@ -684,18 +684,18 @@ class ReciprocalFit(ScatterFit):
 class Independent1DFit(ScatterFit):
     """Interpolate an N-dimensional matrix along a given axis, using a set of
     independent 1-D interpolators.
-    
+
     This simplifies the simultaneous interpolation of a set of one-dimensional
     ``x-y`` relationships. It assumes that ``x`` is 1-D, while ``y`` is N-D and
     to be independently interpolated along ``N-1`` of its dimensions.
-    
+
     Parameters
     ----------
     interp : object
         ScatterFit object to be cloned into an array of interpolators
     axis : int
         Axis of ``y`` matrix which will vary with the independent ``x`` variable
-    
+
     """
     def __init__(self, interp, axis):
         ScatterFit.__init__(self)
@@ -703,17 +703,17 @@ class Independent1DFit(ScatterFit):
         self._axis = axis
         # Array of interpolators, only set after ``fit``
         self._interps = None
-    
+
     def fit(self, x, y):
         """Fit a set of stored interpolators to one axis of *y* matrix.
-        
+
         Parameters
         ----------
         x : array-like, shape (M,)
             Known input values as a 1-D numpy array or sequence
         y : array-like, shape (d_1, d_2, ..., M, ..., d_N)
             Known output values as an N-D numpy array
-        
+
         """
         x = np.atleast_1d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
@@ -739,20 +739,20 @@ class Independent1DFit(ScatterFit):
             flat_interps[n] = copy.deepcopy(self._interp)
             flat_interps[n].fit(x, flat_y[n])
 
-    
+
     def __call__(self, x):
         """Evaluate set of interpolator functions on new data.
-        
+
         Parameters
         ----------
         x : array-like, shape (K,)
             Input to function as a 1-D numpy array, or sequence
-        
+
         Returns
         -------
         y : array, shape (d_1, d_2, ..., K, ..., d_N)
             Output of function as an N-D numpy array
-        
+
         """
         if self._interps == None:
             raise AttributeError, "Interpolator functions not fitted to data yet - first call 'fit'."
@@ -781,7 +781,7 @@ class Independent1DFit(ScatterFit):
 class Delaunay2DScatterFit(ScatterFit):
     """Interpolate scalar function of 2-D data, based on Delaunay triangulation
     (scattered data version).
-    
+
     The *x* data for this object should have two rows, containing the 'x' and
     'y' coordinates of points in a plane. The 2-D points are therefore stored as
     column vectors in *x*. The *y* data for this object is a 1-D array, which
@@ -790,7 +790,7 @@ class Delaunay2DScatterFit(ScatterFit):
     the ``delaunay`` documentation). The 2-D *x* coordinates do not have to
     lie on a regular grid, and can be in any order. Jittering a regular grid
     seems to be troublesome, though...
-    
+
     Parameters
     ----------
     interp_type : {'nn'}, optional
@@ -801,7 +801,7 @@ class Delaunay2DScatterFit(ScatterFit):
     jitter : bool, optional
         True to add small amount of jitter to *x* to make degenerate
         triangulation unlikely
-    
+
     """
     def __init__(self, interp_type='nn', default_val=np.nan, jitter=False):
         if not delaunay_found:
@@ -815,21 +815,21 @@ class Delaunay2DScatterFit(ScatterFit):
         self.jitter = jitter
         # Interpolator function, only set after :func:`fit`
         self._interp = None
-    
+
     def fit(self, x, y):
         """Fit function ``y = f(x)`` to data.
-        
+
         This fits a scalar function defined on 2-D data to the provided x-y
         pairs. The 2-D *x* coordinates do not have to lie on a regular grid,
         and can be in any order.
-        
+
         Parameters
         ----------
         x : array-like, shape (2, N)
             Known input values as a 2-D numpy array, or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
-        
+
         """
         # Check dimensions of known data
         x = np.atleast_2d(np.asarray(x))
@@ -847,22 +847,22 @@ class Delaunay2DScatterFit(ScatterFit):
             tri = delaunay.Triangulation(x[0], x[1])
         if self.interp_type == 'nn':
             self._interp = tri.nn_interpolator(y, default_value=self.default_val)
-    
+
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
-        
+
         Evaluates the fitted scalar function on 2-D data provided in *x*.
-        
+
         Parameters
         ----------
         x : array-like, shape (2, M)
             Input to function as a 2-D numpy array, or sequence
-        
+
         Returns
         -------
         y : array, shape (M,)
             Output of function as a 1-D numpy array
-        
+
         """
         # Check dimensions
         x = np.atleast_2d(np.asarray(x))
@@ -880,14 +880,14 @@ class Delaunay2DScatterFit(ScatterFit):
 class Delaunay2DGridFit(GridFit):
     """Interpolate a scalar function defined on a 2-D grid, based on Delaunay
     triangulation.
-    
+
     The *x* data sequence for this object should have two items: the 'x' and
     'y' axis ticks (both in ascending order) defining a grid of points in a
     plane. The *y* data for this object is a 2-D array of shape
     ``(len(x[0]), len(x[1]))``, which represents the scalar 'z' value of the
     function defined on the grid (the symbols in quotation marks are the names
     for these variables used in the delaunay documentation).
-    
+
     It is assumed that the 'x' and 'y' axis ticks are uniformly spaced during
     evaluation, as this is a requirement of the underlying library. Even more
     restricting is the requirement that the first and last tick should coincide
@@ -895,14 +895,14 @@ class Delaunay2DGridFit(GridFit):
     the 'x' and 'y' axis tick sets will be given default values during
     evaluation. The 'x' and 'y' axes may have a different number of ticks
     (although it is not recommended).
-    
+
     Parameters
     ----------
     interp_type : {'linear', 'nn'}, optional
         String indicating type of interpolation
     default_val : float, optional
         Default value used when trying to extrapolate beyond known grid
-    
+
     """
     def __init__(self, interp_type='nn', default_val=np.nan):
         if not delaunay_found:
@@ -913,24 +913,24 @@ class Delaunay2DGridFit(GridFit):
         self.default_val = default_val
         # Interpolator function, only set after :func:`fit`
         self._interp = None
-    
+
     def fit(self, x, y):
         """Fit function ``y = f(x)`` to data.
-        
+
         This fits a scalar function defined on 2-D data to the provided grid.
         The first sequence in x defines the M 'x' axis ticks (in ascending
         order), while the second sequence in x defines the N 'y' axis ticks.
         The provided function output y contains the corresponding 'z' values
         on the grid, in an array of shape (M, N). The first and last values of
         x[0] and x[1] should match up, to minimise any unexpected results.
-        
+
         Parameters
         ----------
         x : sequence of 2 sequences, of lengths M and N
             Known input grid specified by sequence of 2 sequences of axis ticks
         y : array-like, shape (M, N)
             Known output values as a 2-D numpy array
-        
+
         """
         # Check dimensions of known data
         x = [np.atleast_1d(np.asarray(ax)) for ax in x]
@@ -950,10 +950,10 @@ class Delaunay2DGridFit(GridFit):
             self._interp = tri.nn_interpolator(y.ravel(), default_value=self.default_val)
         elif self.interp_type == 'linear':
             self._interp = tri.linear_interpolator(y.ravel(), default_value=self.default_val)
-    
+
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
-        
+
         Evaluates the fitted scalar function on 2-D grid provided in *x*. The
         first sequence in *x* defines the K 'x' axis ticks (in ascending order),
         while the second sequence in *x* defines the L 'y' axis ticks.
@@ -962,17 +962,17 @@ class Delaunay2DGridFit(GridFit):
         uniformly spaced, as this is a requirement of the underlying library.
         Only the first and last ticks, and the number of ticks, are therefore
         used to construct the grid, while the rest of the values are ignored...
-        
+
         Parameters
         ----------
         x : sequence of 2 sequences, of lengths K and L
             2-D input grid specified by sequence of 2 sequences of axis ticks
-        
+
         Returns
         -------
         y : array, shape (K, L)
             Output of function as a 2-D numpy array
-        
+
         """
         # Check dimensions
         x = [np.atleast_1d(np.asarray(ax)) for ax in x]
@@ -989,26 +989,26 @@ class Delaunay2DGridFit(GridFit):
 
 class NonLinearLeastSquaresFit(ScatterFit):
     """Fit a generic function to data, based on non-linear least squares optimisation.
-    
+
     This fits a function of the form ``y = f(p, x)`` to x-y data, where the
     parameter vector ``p`` is optimised via least squares. It is assumed that
     the data presented to :func:`fit` consists of a sequence of ``x`` and ``y``
     arrays, where each element in the sequence is of the right shape to serve as
     input or output to ``f()``. The helper functions :func:`squash` and
     :func:`unsquash` are useful to get the ``x`` and ``y`` arrays in this form.
-    
+
     The function ``f(p, x)`` should be able to operate on sequences of ``x``
     arrays (i.e. should be vectorised). If it cannot, use the helper function
     :func:`vectorize_fit_func` to wrap the function before passing it to this
     class.
-    
+
     The Jacobian of the function (if available) should return an array of shape
     (normal y shape, N), where ``N = len(p)`` is the number of function
     parameters. Each element of this array indicates the derivative of the
     ``i``'th output value with respect to the ``j``'th parameter, evaluated at
     the given ``p`` and ``x``. This function should also be vectorised, similar
     to ``f``.
-    
+
     Parameters
     ----------
     func : function, signature ``y = f(p, x)``
@@ -1023,13 +1023,13 @@ class NonLinearLeastSquaresFit(ScatterFit):
         function)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying optimiser
-    
+
     Arguments
     ---------
     params : sequence, length N
         Final optimal value for function parameter vector
         (starts off as initial value)
-    
+
     """
     def __init__(self, func, initial_params, func_jacobian=None, method='leastsq', **kwargs):
         ScatterFit.__init__(self)
@@ -1047,21 +1047,21 @@ class NonLinearLeastSquaresFit(ScatterFit):
         if not method in ('fmin_l_bfgs_b', 'fmin_tnc'):
             self._extra_args['full_output'] = 1
         self.params = initial_params
-    
+
     def fit(self, x, y):
         """Fit function to data, by performing non-linear least squares optimisation.
-        
+
         This determines the optimal parameter vector ``p*`` so that the function
         ``y = f(p, x)`` best fits the observed x-y data, in a least-squares
         sense.
-        
+
         Parameters
         ----------
         x : array-like, shape (K, normal x shape)
             Sequence of input values as a numpy array
         y : array-like, shape (K, normal y shape)
             Sequence of output values as a numpy array
-        
+
         """
         x = np.asarray(x)
         y = np.asarray(y)
@@ -1093,41 +1093,41 @@ class NonLinearLeastSquaresFit(ScatterFit):
                 self._extra_args['fprime'] = jacobian
         # Do optimisation (copy initial parameters, as the optimiser clobbers them with final values)
         self.params = self._optimizer(cost, copy.deepcopy(self.initial_params), **self._extra_args)[0]
-    
+
     def __call__(self, x):
         """Evaluate fitted function on new data.
-        
+
         Evaluates the fitted function ``y = f(p*, x)`` on new *x* data.
-        
+
         Parameters
         ----------
         x : array
             Input to function as a numpy array
-        
+
         Returns
         -------
         y : array
             Output of function as a numpy array
-        
+
         """
         return self.func(self.params, x)
-    
+
     def __copy__(self):
         """Shallow copy operation."""
         return NonLinearLeastSquaresFit(self.func, self.params, self.func_jacobian,
                                         self._optimizer.__name__, **self._extra_args)
-    
+
     def __deepcopy__(self, memo):
         """Deep copy operation.
-        
+
         Don't deepcopy stored functions, as this is not supported in Python 2.4
         (Python 2.5 supports it...).
-        
+
         Parameters
         ----------
         memo : dict
             Dictionary that caches objects that are already copied
-        
+
         """
         return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo), self.func_jacobian,
                                         copy.deepcopy(self._optimizer.__name__, memo),
@@ -1139,12 +1139,12 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
 class GaussianFit(ScatterFit):
     """Fit Gaussian curve to multi-dimensional data.
-    
+
     This fits a D-dimensional Gaussian curve (with diagonal covariance matrix
     or single scalar variance) to x-y data. Don't confuse this with fitting a
     Gaussian pdf to random data! The underlying optimiser is a modified
     Levenberg-Marquardt algorithm (:func:`scipy.optimize.leastsq`).
-    
+
     Parameters
     ----------
     mean : array-like, shape (D,)
@@ -1154,7 +1154,7 @@ class GaussianFit(ScatterFit):
         for all dimensions
     height : float
         Initial guess of height of Gaussian curve
-    
+
     Arguments
     ---------
     mean : array-like, shape (D,)
@@ -1164,12 +1164,12 @@ class GaussianFit(ScatterFit):
         or final optimal value
     height : float
         Height of Gaussian curve, either initial guess or final optimal value
-    
+
     Raises
     ------
     ValueError
         If dimensions of mean and/or var are incompatible
-    
+
     Notes
     -----
     One option that was considered is fitting the Gaussian internally to the log
@@ -1177,7 +1177,7 @@ class GaussianFit(ScatterFit):
     negative data, which frequently occur in noisy problems. With log data,
     the optimisation criterion is not quite least-squares in the original x-y
     domain as well.
-    
+
     """
     # pylint: disable-msg=W0612
     def __init__(self, mean, var, height):
@@ -1205,20 +1205,20 @@ class GaussianFit(ScatterFit):
             return p[D] * np.exp(-0.5 * np.dot(x_min_mu * x_min_mu, ivar))
         # Internal non-linear least squares fitter
         self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params, method='leastsq')
-    
+
     def fit(self, x, y):
         """Fit a Gaussian curve to data.
-        
+
         The mean, variance and height can be obtained from the corresponding
         member variables after this is run.
-        
+
         Parameters
         ----------
         x : array, shape (N, D)
             Sequence of D-dimensional input values as a numpy array
         y : array, shape (N,)
             Sequence of 1-D output values as a numpy array
-        
+
         """
         self._interp.fit(x, y)
         # Recreate Gaussian parameters
@@ -1229,17 +1229,17 @@ class GaussianFit(ScatterFit):
             self.var = 1.0 / self._interp.params[D + 1]
         else:
             self.var = 1.0 / self._interp.params[D + 1:]
-    
+
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
-        
+
         Parameters
         ----------
         x : array, shape (M, D)
             Input to function as a numpy array
         y : array, shape (M,)
             Output of function as a numpy array
-        
+
         """
         return self._interp(x)
 
@@ -1249,11 +1249,11 @@ class GaussianFit(ScatterFit):
 
 class Spline1DFit(ScatterFit):
     """Fit a B-spline to 1-D data.
-    
+
     This uses the spline classes in :mod:`scipy.interpolate`, which is based on
     Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``curfit``
     for fitting and ``splev`` for evaluation).
-    
+
     Parameters
     ----------
     degree : int, optional
@@ -1267,7 +1267,7 @@ class Spline1DFit(ScatterFit):
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
-    
+
     """
     def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(y)), method='UnivariateSpline', **kwargs):
         ScatterFit.__init__(self)
@@ -1285,19 +1285,19 @@ class Spline1DFit(ScatterFit):
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
         self._interp = None
-    
+
     def fit(self, x, y):
         """Fit spline to 1-D data.
-        
+
         The minimum number of data points is N = degree + 1.
-        
+
         Parameters
         ----------
         x : array-like, shape (N,)
             Known input values as a 1-D numpy array or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
-        
+
         """
         # Check dimensions of known data
         x = np.atleast_1d(np.asarray(x))
@@ -1311,20 +1311,20 @@ class Spline1DFit(ScatterFit):
             x = x[sort_ind]
             y = y[sort_ind]
         self._interp = self._spline_class(x, y, w=1.0 / self._std_y(x, y), k=self.degree, **self._extra_args)
-    
+
     def __call__(self, x):
         """Evaluate spline on new data.
-        
+
         Parameters
         ----------
         x : array-like, shape (M,)
             Input to function as a 1-D numpy array, or sequence
-        
+
         Return
         ------
         y : array, shape (M,)
             Output of function as a 1-D numpy array
-        
+
         """
         x = np.atleast_1d(np.asarray(x))
         if self._interp == None:
@@ -1337,12 +1337,12 @@ class Spline1DFit(ScatterFit):
 
 class Spline2DScatterFit(ScatterFit):
     """Fit a B-spline to scattered 2-D data.
-    
+
     This uses the spline classes in :mod:`scipy.interpolate`, which is based on
     Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``surfit`` for
     fitting and ``bispev`` for evaluation). The 2-D ``x`` coordinates do not
     have to lie on a regular grid, and can be in any order.
-    
+
     Parameters
     ----------
     degree : sequence of 2 ints, optional
@@ -1356,7 +1356,7 @@ class Spline2DScatterFit(ScatterFit):
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
-    
+
     """
     def __init__(self, degree=(3, 3), std_y=lambda x, y: np.tile(1.0, len(y)),
                  method='SmoothBivariateSpline', **kwargs):
@@ -1375,21 +1375,21 @@ class Spline2DScatterFit(ScatterFit):
         self._std_y = std_y
         # Interpolator function, only set after :func:`fit`
         self._interp = None
-    
+
     def fit(self, x, y):
         """Fit spline to 2-D scattered data in unstructured form.
-        
+
         The minimum number of data points is ``N = (degree[0]+1)*(degree[1]+1)``.
         The 2-D *x* coordinates do not have to lie on a regular grid, and can be
         in any order.
-        
+
         Parameters
         ----------
         x : array-like, shape (2, N)
             Known input values as a 2-D numpy array, or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
-        
+
         """
         # Check dimensions of known data
         x = np.atleast_2d(np.asarray(x))
@@ -1402,20 +1402,20 @@ class Spline2DScatterFit(ScatterFit):
                              str((self.degree[0] + 1) * (self.degree[1] + 1)) + ", only got " + str(y.size))
         self._interp = self._spline_class(x[0], x[1], y, w=1.0 / self._std_y(x, y),
                                           kx=self.degree[0], ky=self.degree[1], **self._extra_args)
-    
+
     def __call__(self, x):
         """Evaluate spline on new scattered data.
-        
+
         Parameters
         ----------
         x : array-like, shape (2, M)
             Input to function as a 2-D numpy array, or sequence
-        
+
         Returns
         -------
         y : array, shape (M,)
             Output of function as a 1-D numpy array
-        
+
         """
         # Check dimensions
         x = np.atleast_2d(np.asarray(x))
@@ -1433,13 +1433,13 @@ class Spline2DScatterFit(ScatterFit):
 
 class Spline2DGridFit(GridFit):
     """Fit a B-spline to 2-D data on a rectangular grid.
-    
+
     This uses the spline classes in :mod:`scipy.interpolate`, which is based on
     Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``regrid`` for
     fitting and ``bispev`` for evaluation). The 2-D ``x`` coordinates define a
     rectangular grid. They do not have to be in ascending order, as both the
     fitting and evaluation routines sort them for you.
-    
+
     Parameters
     ----------
     degree : sequence of 2 ints, optional
@@ -1448,7 +1448,7 @@ class Spline2DGridFit(GridFit):
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
-    
+
     """
     def __init__(self, degree=(3, 3), method='RectBivariateSpline', **kwargs):
         GridFit.__init__(self)
@@ -1464,24 +1464,24 @@ class Spline2DGridFit(GridFit):
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
         self._interp = None
-    
+
     def fit(self, x, y):
         """Fit spline to 2-D data on a rectangular grid.
-        
+
         This fits a scalar function defined on 2-D data to the provided grid.
         The first sequence in *x* defines the M 'x' axis ticks (in any order),
         while the second sequence in *x* defines the N 'y' axis ticks (also in
         any order). The provided function output *y* contains the corresponding
         'z' values on the grid, in an array of shape (M, N). The minimum number
         of data points is ``(degree[0]+1)*(degree[1]+1)``.
-        
+
         Parameters
         ----------
         x : sequence of 2 sequences, of lengths M and N
             Known input grid specified by sequence of 2 sequences of axis ticks
         y : array-like, shape (M, N)
             Known output values as a 2-D numpy array
-        
+
         """
         # Check dimensions of known data
         x = [np.atleast_1d(np.asarray(ax)) for ax in x]
@@ -1497,26 +1497,26 @@ class Spline2DGridFit(GridFit):
         # Ensure that 'x' and 'y' coordinates are both in ascending order (requirement of underlying regrid)
         xs, ys, zs = sort_grid(x[0], x[1], y)
         self._interp = self._spline_class(xs, ys, zs, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
-    
+
     def __call__(self, x):
         """Evaluate spline on a new rectangular grid.
-        
+
         Evaluates the fitted scalar function on 2-D grid provided in *x*. The
         first sequence in *x* defines the K 'x' axis ticks (in any order), while
         the second sequence in *x* defines the L 'y' axis ticks (also in any
         order). The function returns the corresponding 'z' values on the grid,
         in an array of shape (K, L).
-        
+
         Parameters
         ----------
         x : sequence of 2 sequences, of lengths K and L
             2-D input grid specified by sequence of 2 sequences of axis ticks
-        
+
         Returns
         -------
         y : array-like, shape (K, L)
             Output of function as a 2-D numpy array
-        
+
         """
         # Check dimensions
         x = [np.atleast_1d(np.asarray(ax)) for ax in x]
@@ -1535,15 +1535,15 @@ class Spline2DGridFit(GridFit):
 
 class RbfScatterFit(ScatterFit):
     """Do radial basis function (RBF) interpolation of scattered multi-dimensional data.
-    
+
     This uses the :class:`scipy.interpolate.Rbf` class. The D-dimensional ``x``
     coordinates do not have to lie on a regular grid, and can be in any order.
-    
+
     Parameters
     ----------
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying Rbf class
-    
+
     """
     def __init__(self, **kwargs):
         ScatterFit.__init__(self)
@@ -1555,20 +1555,20 @@ class RbfScatterFit(ScatterFit):
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
         self._interp = None
-    
+
     def fit(self, x, y):
         """Fit RBF to D-dimensional scattered data in unstructured form.
-        
+
         The D-dimensional *x* coordinates do not have to lie on a regular grid,
         and can be in any order.
-        
+
         Parameters
         ----------
         x : array-like, shape (D, N)
             Known input values as a numpy array or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array or sequence
-        
+
         """
         # Check dimensions of known data
         x = np.atleast_2d(np.asarray(x))
@@ -1577,20 +1577,20 @@ class RbfScatterFit(ScatterFit):
             raise ValueError("RBF interpolator requires input data with shape (D, N) and output data with " +
                              "shape (N,), got " + str(x.shape) + " and " + str(y.shape) + " instead.")
         self._interp = scipy.interpolate.Rbf(*np.vstack((x, y)), **self._extra_args)
-    
+
     def __call__(self, x):
         """Evaluate RBF on new scattered data.
-        
+
         Parameters
         ----------
         x : array-like, shape (D, M)
             Input to function as a numpy array or sequence
-        
+
         Returns
         -------
         y : array, shape (M,)
             Output of function as a 1-D numpy array
-        
+
         """
         # Check dimensions
         x = np.atleast_2d(np.asarray(x))

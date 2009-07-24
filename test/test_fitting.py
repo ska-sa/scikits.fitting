@@ -7,12 +7,12 @@ from scape import fitting
 
 class Polynomial1DFitTestCases(unittest.TestCase):
     """Fit a 1-D polynomial to data from a known polynomial, and compare."""
-    
+
     def setUp(self):
         self.poly = np.array([1.0, -2.0, 1.0])
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
-        
+
     def test_fit_eval(self):
         interp = fitting.Polynomial1DFit(2)
         self.assertRaises(AttributeError, interp, self.x)
@@ -21,7 +21,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         self.assertAlmostEqual(interp._mean, 0.0, places=10)
         np.testing.assert_almost_equal(interp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
-    
+
     # pylint: disable-msg=R0201
     def test_reduce_degree(self):
         interp = fitting.Polynomial1DFit(2)
@@ -30,12 +30,12 @@ class Polynomial1DFitTestCases(unittest.TestCase):
 
 class ReciprocalFitTestCases(unittest.TestCase):
     """Check the ReciprocalFit class."""
-    
+
     def setUp(self):
         self.poly = np.array([1.0, 2.0, 10.0])
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = 1.0 / np.polyval(self.poly, self.x)
-    
+
     def test_fit_eval(self):
         interp = fitting.ReciprocalFit(fitting.Polynomial1DFit(2))
         self.assertRaises(AttributeError, interp, self.x)
@@ -61,7 +61,7 @@ class Independent1DFitTestCases(unittest.TestCase):
         self.y[1, :, 0] = np.polyval(self.poly2, self.x)
         self.y[1, :, 1] = np.polyval(self.poly1, self.x)
         self.y[1, :, 2] = np.polyval(self.poly2, self.x)
-    
+
     def test_fit_eval(self):
         interp = fitting.Independent1DFit(fitting.Polynomial1DFit(2), self.axis)
         self.assertRaises(AttributeError, interp, self.x)
@@ -81,7 +81,7 @@ class Independent1DFitTestCases(unittest.TestCase):
 
 class Delaunay2DScatterFitTestCases(unittest.TestCase):
     """Check the Delaunay2DScatterFit class."""
-    
+
     def setUp(self):
         # Square diamond shape
         self.x = np.array([[-1, 0, 0, 0, 1], [0, -1, 0, 1, 0]])
@@ -91,7 +91,7 @@ class Delaunay2DScatterFitTestCases(unittest.TestCase):
         self.default_val = -100
         self.outsidex = np.array([[10], [10]])
         self.outsidey = np.array([self.default_val])
-    
+
     def test_fit_eval_nn(self):
         interp = fitting.Delaunay2DScatterFit(default_val=self.default_val)
         self.assertRaises(AttributeError, interp, self.x)
@@ -106,7 +106,7 @@ class Delaunay2DScatterFitTestCases(unittest.TestCase):
 
 class Delaunay2DGridFitTestCases(unittest.TestCase):
     """Check the Delaunay2DGridFit class."""
-    
+
     def setUp(self):
         # Training data is uniformly sampled parabola (make sure x and y ranges coincide)
         poly = np.array([1.0, 2.0, 1.0])
@@ -148,7 +148,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
 
 class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
     """Check the NonLinearLeastSquaresFit class."""
-    
+
     def setUp(self):
         # Quadratic function centred at p
         func = lambda p, x: ((x - p)**2).sum()
@@ -166,7 +166,7 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
         self.init_params2 = np.array([0, 0, 1, 1, 0])
         self.x2 = np.random.randn(80, 2)
         self.y2 = lngauss_diagcov(self.true_params2, self.x2)
-    
+
     def test_fit_eval_func1(self):
         self.assertRaises(KeyError, fitting.NonLinearLeastSquaresFit, \
                           self.vFunc, self.init_params, method='bollie')
@@ -175,7 +175,7 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.params, self.true_params, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=5)
-    
+
     def test_fit_eval_gauss(self):
         interp2 = fitting.NonLinearLeastSquaresFit(self.func2, self.init_params2, method='leastsq')
         interp2.fit(self.x2, self.y2)
@@ -185,7 +185,7 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
 
 class GaussianFit2VarTestCases(unittest.TestCase):
     """Check the GaussianFit class with different variances on each dimension."""
-    
+
     def setUp(self):
         # For a more challenging fit, move the true mean away from the origin, i.e. away from the region
         # being randomly sampled in self.x. Fitting a Gaussian to a segment that does not contain a clear peak
@@ -195,7 +195,7 @@ class GaussianFit2VarTestCases(unittest.TestCase):
         self.x = 7*np.random.randn(80, 2)
         self.y = true_gauss(self.x)
         self.init_mean, self.init_var, self.init_height = [3, -2], [1, 1], 1
-    
+
     def test_fit_eval_diagcov(self):
         interp = fitting.GaussianFit(self.init_mean, self.init_var, self.init_height)
         interp.fit(self.x, self.y)
@@ -207,14 +207,14 @@ class GaussianFit2VarTestCases(unittest.TestCase):
 
 class GaussianFit1VarTestCases(unittest.TestCase):
     """Check the GaussianFit class with a single variance on all dimensions."""
-    
+
     def setUp(self):
         self.true_mean, self.true_var, self.true_height = [0, 0], 10, 4
         true_gauss = fitting.GaussianFit(self.true_mean, self.true_var, self.true_height)
         self.x = 7*np.random.randn(80, 2)
         self.y = true_gauss(self.x)
         self.init_mean, self.init_var, self.init_height = [3, -2], 1, 1
-    
+
     def test_fit_eval_diagcov(self):
         interp = fitting.GaussianFit(self.init_mean, self.init_var, self.init_height)
         interp.fit(self.x, self.y)
@@ -226,7 +226,7 @@ class GaussianFit1VarTestCases(unittest.TestCase):
 
 class Spline1DFitTestCases(unittest.TestCase):
     """Check the Spline1DFit class."""
-    
+
     def setUp(self):
         # Training data is randomly sampled parabola
         self.poly = np.array([1.0, -2.0, 1.0])
@@ -235,7 +235,7 @@ class Spline1DFitTestCases(unittest.TestCase):
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
         self.testx = 0.2*np.random.randn(40)
         self.testy = np.polyval(self.poly, self.testx)
-    
+
     def test_fit_eval(self):
         interp = fitting.Spline1DFit(3)
         self.assertRaises(AttributeError, interp, self.x)
@@ -247,7 +247,7 @@ class Spline1DFitTestCases(unittest.TestCase):
 
 class Spline2DScatterFitTestCases(unittest.TestCase):
     """Check the Spline2DScatterFit class."""
-    
+
     def setUp(self):
         # Training data is randomly sampled parabola
         poly = np.array([1.0, 2.0, 1.0])
@@ -256,7 +256,7 @@ class Spline2DScatterFitTestCases(unittest.TestCase):
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
         self.testx = 0.2*np.random.randn(2, 100)
         self.testy = poly[0]*self.testx[0]**2 + poly[1]*self.testx[0]*self.testx[1] + poly[2]*self.testx[1]**2
-    
+
     def test_fit_eval(self):
         interp = fitting.Spline2DScatterFit((3, 3))
         self.assertRaises(AttributeError, interp, self.x)
@@ -269,7 +269,7 @@ class Spline2DScatterFitTestCases(unittest.TestCase):
 
 class Spline2DGridFitTestCases(unittest.TestCase):
     """Check the Spline2DGridFit class."""
-    
+
     def setUp(self):
         # Training data is randomly sampled parabola (but remember to keep data in ascending order)
         poly = np.array([1.0, 2.0, 1.0])
@@ -293,14 +293,14 @@ class Spline2DGridFitTestCases(unittest.TestCase):
 
 class RbfScatterFitTestCases(unittest.TestCase):
     """Check the RbfScatterFit class (only if Rbf is installed in SciPy)."""
-    
+
     def setUp(self):
         # Square diamond shape
         self.x = np.array([[-1, 0, 0, 0, 1], [0, -1, 0, 1, 0]])
         self.y = np.array([1, 1, 1, 1, 1])
         self.testx = np.array([[-0.5, 0, 0.5, 0], [0, -0.5, 0.5, 0]])
         self.testy = np.array([1, 1, 1, 1])
-    
+
     def test_fit_eval(self):
         try:
             interp = fitting.RbfScatterFit()
@@ -316,14 +316,14 @@ class RbfScatterFitTestCases(unittest.TestCase):
 
 class RandomisedFitTestCases(unittest.TestCase):
     """Check the randomisation of existing fits via RandomisedFit."""
-    
+
     def setUp(self):
         self.poly = np.array([1.0, -2.0, 1.0])
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
         self.num_runs = 100
         self.yNoisy = self.y + 0.001*np.random.randn(self.num_runs, len(self.y))
-    
+
     def test_randomised_polyfit(self):
         interp = fitting.Polynomial1DFit(2)
         # Perfect fit (no noise)
