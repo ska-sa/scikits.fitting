@@ -29,6 +29,8 @@ Scatter fitters
 
 - :class:`ScatterFit` : Abstract base class for scatter fitters
 - :class:`Polynomial1DFit` : Fit polynomial to 1-D data
+- :class:`Polynomial2DFit` : Fit polynomial to 2-D data
+- :class:`PiecewisePolynomial1DFit` : Fit piecewise polynomial to 1-D data
 - :class:`ReciprocalFit` : Interpolate the reciprocal of data
 - :class:`Independent1DFit` : Interpolate N-dimensional matrix along given axis
 - :class:`Delaunay2DScatterFit` : Interpolate scalar function of 2-D data, based on
@@ -38,6 +40,7 @@ Scatter fitters
 - :class:`GaussianFit` : Fit Gaussian curve to multi-dimensional data
 - :class:`Spline1DFit` : Fit a B-spline to 1-D data
 - :class:`Spline2DScatterFit` : Fit a B-spline to scattered 2-D data
+- :class:`RbfScatterFit` : Do radial basis function (RBF) interpolation
 
 Grid fitters
 ------------
@@ -67,7 +70,8 @@ import logging
 
 import numpy as np
 import scipy.optimize       # NonLinearLeastSquaresFit
-import scipy.interpolate    # Spline1DFit, Spline2DScatterFit, Spline2DGridFit, RbfScatterFit
+import scipy.interpolate    # Spline1DFit, Spline2DScatterFit, Spline2DGridFit,
+                            # RbfScatterFit, PiecewisePolynomial1DFit
 # Since scipy 0.7.0 the delaunay module lives in scikits
 try:
     # pylint: disable-msg=E0611
@@ -225,9 +229,9 @@ def sort_grid(x, y, z):
         2-D array of values which correspond to the coordinates in *xx* and *yy*
 
     """
-    xInd = np.argsort(x)
-    yInd = np.argsort(y)
-    return x[xInd], y[yInd], z[xInd, :][:, yInd]
+    x_ind = np.argsort(x)
+    y_ind = np.argsort(y)
+    return x[x_ind], y[y_ind], z[x_ind, :][:, y_ind]
 
 def desort_grid(x, y, z):
     """Undo the effect of :func:`sort_grid`.
@@ -626,6 +630,106 @@ class Polynomial2DFit(ScatterFit):
             raise AttributeError("Polynomial not fitted to data yet - first call 'fit'.")
         x = np.atleast_2d(np.asarray(x))
         return np.dot(self._regressor(x), self.poly)
+
+#----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  PiecewisePolynomial1DFit
+#----------------------------------------------------------------------------------------------------------------------
+
+class PiecewisePolynomial1DFit(ScatterFit):
+    """Fit piecewise polynomial to 1-D data.
+
+    This fits a series of polynomials between adjacent points in a
+    one-dimensional data set. The resulting piecewise polynomial curve passes
+    exactly through the given data points and may also match the local gradient
+    at each point if the maximum polynomial degree, *max_degree*, is at least 3.
+
+    If *max_degree* is 1, linear interpolation is done between the points in the
+    data set. The resulting curve is continuous but has sharp corners at the
+    data points. If *max_degree* is 3, cubic interpolation is used and the
+    resulting is curve is smooth (up to the first derivative).
+
+    This should primarily be used for interpolation between points and not for
+    extrapolation outside the data range, which could lead to wildly inaccurate
+    results (especially if *max_degree* is high).
+
+    Parameters
+    ----------
+    max_degree : int
+        Maximum polynomial degree (>= 1) to use in each segment between data
+        points (automatically reduced if there are not enough data points or where
+        derivatives are not available, such as at the first and last segment)
+
+    Notes
+    -----
+    This is based on :class:`scipy.interpolate.PiecewisePolynomial`.
+
+    """
+    def __init__(self, max_degree=3):
+        ScatterFit.__init__(self)
+        self.max_degree = max_degree
+        self._poly = None
+
+    def fit(self, x, y):
+        """Fit piecewise polynomial to data.
+
+        Parameters
+        ----------
+        x : array-like, shape (N,)
+            Known input values as a 1-D numpy array or sequence
+        y : array-like, shape (N,)
+            Known output values as a 1-D numpy array, or sequence
+
+        Raises
+        ------
+        ValueError
+            If *x* contains duplicate values, which leads to infinite gradients
+
+        """
+        # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
+        x = np.atleast_1d(np.array(x, dtype='double'))
+        y = np.atleast_1d(np.array(y, dtype='double'))
+        # Sort x in ascending order, as PiecewisePolynomial expects sorted data
+        x_ind = np.argsort(x)
+        x, y = x[x_ind], y[x_ind]
+        # This list will contain y values and corresponding derivatives
+        y_list = np.atleast_2d(y).transpose().tolist()
+        if np.any(np.diff(x) <= 0.0):
+            raise ValueError("Two consecutive points have same x-coordinate - infinite gradient not allowed")
+        # Maximum derivative order warranted by polynomial degree and number of data points
+        max_deriv = min((self.max_degree - 1) // 2, len(x) - 2)
+        if max_deriv > 0:
+            # Length of x interval straddling each data point (from previous to next point)
+            x_interval = np.convolve(np.diff(x), [1.0, 1.0], 'valid')
+            y_deriv = y
+        # Recursively calculate the n'th derivative of y, up to maximum order
+        for n in xrange(1, max_deriv + 1):
+            # The difference between (n-1)'th derivative of y at previous and next point, divided by interval
+            y_deriv = np.convolve(np.diff(y_deriv), [1.0, 1.0], 'valid') / x_interval
+            x_interval = x_interval[1:-1]
+            for m in xrange(len(y_deriv)):
+                y_list[m + n].append(y_deriv[m])
+        if len(x) == 1:
+            self._poly = lambda x: y[0]
+        else:
+            self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
+
+    def __call__(self, x):
+        """Evaluate piecewise polynomial on new data.
+
+        Parameters
+        ----------
+        x : array-like, shape (M,)
+            Input to function as a 1-D numpy array, or sequence
+
+        Returns
+        -------
+        y : array, shape (M,)
+            Output of function as a 1-D numpy array
+
+        """
+        if self._poly is None:
+            raise AttributeError("Piecewise polynomial not fitted to data yet - first call 'fit'.")
+        return self._poly(x)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  ReciprocalFit
