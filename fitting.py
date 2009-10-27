@@ -514,7 +514,7 @@ class Polynomial1DFit(ScatterFit):
             Output of function as a 1-D numpy array
 
         """
-        if (self.poly == None) or (self._mean == None):
+        if (self.poly is None) or (self._mean is None):
             raise AttributeError, "Polynomial not fitted to data yet - first call 'fit'."
         x = np.atleast_1d(np.asarray(x))
         return np.polyval(self.poly, x - self._mean)
@@ -626,7 +626,7 @@ class Polynomial2DFit(ScatterFit):
             Output of function as a 1-D numpy array
 
         """
-        if (self.poly == None) or (self._mean == None):
+        if (self.poly is None) or (self._mean is None):
             raise AttributeError("Polynomial not fitted to data yet - first call 'fit'.")
         x = np.atleast_2d(np.asarray(x))
         return np.dot(self._regressor(x), self.poly)
@@ -858,7 +858,7 @@ class Independent1DFit(ScatterFit):
             Output of function as an N-D numpy array
 
         """
-        if self._interps == None:
+        if self._interps is None:
             raise AttributeError, "Interpolator functions not fitted to data yet - first call 'fit'."
         x = np.atleast_1d(np.asarray(x))
         # Create blank output array with specified axis appended at the end of shape
@@ -973,7 +973,7 @@ class Delaunay2DScatterFit(ScatterFit):
         if (len(x.shape) != 2) or (x.shape[0] != 2):
             raise ValueError("Delaunay interpolator requires input data with shape (2, N), got " +
                              str(x.shape) + " instead.")
-        if self._interp == None:
+        if self._interp is None:
             raise AttributeError("Interpolator function not fitted to data yet - first call 'fit'.")
         return self._interp(x[0], x[1])
 
@@ -1083,7 +1083,7 @@ class Delaunay2DGridFit(GridFit):
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1):
             raise ValueError("Delaunay interpolator requires input data with shape [(M,), (N,)], got " +
                              str([ax.shape for ax in x]) + " instead.")
-        if self._interp == None:
+        if self._interp is None:
             raise AttributeError("Interpolator function not fitted to data yet - first call 'fit'.")
         return self._interp[x[0][0]:x[0][-1]:len(x[0])*1j, x[1][0]:x[1][-1]:len(x[1])*1j]
 
@@ -1177,7 +1177,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
             else:
                 return (residuals**2).sum()
         # Register Jacobian function if applicable
-        if self.func_jacobian != None:
+        if not self.func_jacobian is None:
             # Jacobian (M, N) matrix of function at given p and x values (derivatives along rows)
             def jacobian(p):
                 # Produce Jacobian of residual - array with shape (K, normal y shape, N)
@@ -1431,7 +1431,7 @@ class Spline1DFit(ScatterFit):
 
         """
         x = np.atleast_1d(np.asarray(x))
-        if self._interp == None:
+        if self._interp is None:
             raise AttributeError("Spline not fitted to data yet - first call 'fit'.")
         return self._interp(x)
 
@@ -1526,7 +1526,7 @@ class Spline2DScatterFit(ScatterFit):
         if (len(x.shape) != 2) or (x.shape[0] != 2):
             raise ValueError("Spline interpolator requires input data with shape (2,N), got " +
                              str(x.shape) + " instead.")
-        if self._interp == None:
+        if self._interp is None:
             raise AttributeError("Spline not fitted to data yet - first call 'fit'.")
         # Loop over individual data points, as underlying bispev routine expects regular grid in x
         return np.array([self._interp(x[0, n], x[1, n]) for n in xrange(x.shape[1])]).squeeze()
@@ -1627,7 +1627,7 @@ class Spline2DGridFit(GridFit):
         if (len(x) != 2) or (len(x[0].shape) != 1) or (len(x[1].shape) != 1):
             raise ValueError("Spline interpolator requires input data with shape [(M,), (N,)], got " +
                              str([ax.shape for ax in x]) + " instead.")
-        if self._interp == None:
+        if self._interp is None:
             raise AttributeError("Spline not fitted to data yet - first call 'fit'.")
         # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid in ascending order
         # Therefore, sort coordinates, evaluate on the sorted grid, and return the desorted result
@@ -1701,7 +1701,7 @@ class RbfScatterFit(ScatterFit):
         if (len(x.shape) != 2):
             raise ValueError("RBF interpolator requires input data with shape (D,N), got " +
                              str(x.shape) + " instead.")
-        if self._interp == None:
+        if self._interp is None:
             raise AttributeError("RBF not fitted to data yet - first call 'fit'.")
         return self._interp(*x)
 
