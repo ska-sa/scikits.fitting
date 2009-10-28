@@ -15,7 +15,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
 
     def test_fit_eval(self):
         interp = fitting.Polynomial1DFit(2)
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         self.assertAlmostEqual(interp._mean, 0.0, places=10)
@@ -38,7 +38,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
 
     def test_fit_eval(self):
         interp = fitting.PiecewisePolynomial1DFit(max_degree=3)
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, [0, 0], [1, 2])
         interp.fit(self.x[::2], self.y[::2])
         y = interp(self.x)
@@ -54,7 +54,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
 
     def test_fit_eval(self):
         interp = fitting.ReciprocalFit(fitting.Polynomial1DFit(2))
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         self.assertAlmostEqual(interp._interp._mean, 0.0, places=10)
@@ -80,7 +80,7 @@ class Independent1DFitTestCases(unittest.TestCase):
 
     def test_fit_eval(self):
         interp = fitting.Independent1DFit(fitting.Polynomial1DFit(2), self.axis)
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.x, self.y_too_low_dim)
         self.assertRaises(ValueError, interp.fit, self.x, self.y_wrong_size)
         interp.fit(self.x, self.y)
@@ -110,7 +110,7 @@ class Delaunay2DScatterFitTestCases(unittest.TestCase):
 
     def test_fit_eval_nn(self):
         interp = fitting.Delaunay2DScatterFit(default_val=self.default_val)
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -140,7 +140,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
 
     def test_fit_eval_nn(self):
         interp = fitting.Delaunay2DGridFit('nn', default_val=self.default_val)
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -152,7 +152,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
 
     def test_fit_eval_linear(self):
         interp = fitting.Delaunay2DGridFit('linear', default_val=self.default_val)
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -167,24 +167,24 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
 
     def setUp(self):
         # Quadratic function centred at p
-        func = lambda p, x: ((x - p)**2).sum()
+        func = lambda p, x: ((x - p) ** 2).sum()
         self.vFunc = fitting.vectorize_fit_func(func)
         self.true_params = np.array([1, -4])
         self.init_params = np.array([0, 0])
-        self.x = 4.0*np.random.randn(20, 2)
+        self.x = 4.0 * np.random.randn(2, 20)
         self.y = self.vFunc(self.true_params, self.x)
         # 2-D log Gaussian function
         def lngauss_diagcov(p, x):
-            xminmu = x - p[np.newaxis, 0:2]
-            return p[4] - 0.5 * np.dot(xminmu * xminmu, p[2:4])
+            xminmu = x - p[:2, np.newaxis]
+            return p[4] - 0.5 * np.dot(p[2:4], xminmu * xminmu)
         self.func2 = lngauss_diagcov
         self.true_params2 = np.array([3, -2, 10, 10, 4])
         self.init_params2 = np.array([0, 0, 1, 1, 0])
-        self.x2 = np.random.randn(80, 2)
+        self.x2 = np.random.randn(2, 80)
         self.y2 = lngauss_diagcov(self.true_params2, self.x2)
 
     def test_fit_eval_func1(self):
-        self.assertRaises(KeyError, fitting.NonLinearLeastSquaresFit, \
+        self.assertRaises(ValueError, fitting.NonLinearLeastSquaresFit, \
                           self.vFunc, self.init_params, method='bollie')
         interp = fitting.NonLinearLeastSquaresFit(self.vFunc, self.init_params, method='fmin_bfgs', disp=0)
         interp.fit(self.x, self.y)
@@ -208,7 +208,7 @@ class GaussianFit2VarTestCases(unittest.TestCase):
         # works fine if the fit is done to the log of the data, but fails in the linear domain.
         self.true_mean, self.true_var, self.true_height = [0, 0], [10, 20], 4
         true_gauss = fitting.GaussianFit(self.true_mean, self.true_var, self.true_height)
-        self.x = 7*np.random.randn(80, 2)
+        self.x = 7 * np.random.randn(2, 80)
         self.y = true_gauss(self.x)
         self.init_mean, self.init_var, self.init_height = [3, -2], [1, 1], 1
 
@@ -227,7 +227,7 @@ class GaussianFit1VarTestCases(unittest.TestCase):
     def setUp(self):
         self.true_mean, self.true_var, self.true_height = [0, 0], 10, 4
         true_gauss = fitting.GaussianFit(self.true_mean, self.true_var, self.true_height)
-        self.x = 7*np.random.randn(80, 2)
+        self.x = 7 * np.random.randn(2, 80)
         self.y = true_gauss(self.x)
         self.init_mean, self.init_var, self.init_height = [3, -2], 1, 1
 
@@ -254,7 +254,7 @@ class Spline1DFitTestCases(unittest.TestCase):
 
     def test_fit_eval(self):
         interp = fitting.Spline1DFit(3)
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         testy = interp(self.testx)
@@ -275,7 +275,7 @@ class Spline2DScatterFitTestCases(unittest.TestCase):
 
     def test_fit_eval(self):
         interp = fitting.Spline2DScatterFit((3, 3))
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -299,7 +299,7 @@ class Spline2DGridFitTestCases(unittest.TestCase):
 
     def test_fit_eval(self):
         interp = fitting.Spline2DGridFit((3, 3))
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -322,7 +322,7 @@ class RbfScatterFitTestCases(unittest.TestCase):
             interp = fitting.RbfScatterFit()
         except ImportError:
             return
-        self.assertRaises(AttributeError, interp, self.x)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -338,7 +338,7 @@ class RandomisedFitTestCases(unittest.TestCase):
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
         self.num_runs = 100
-        self.yNoisy = self.y + 0.001*np.random.randn(self.num_runs, len(self.y))
+        self.yNoisy = self.y + 0.001 * np.random.randn(self.num_runs, len(self.y))
 
     def test_randomised_polyfit(self):
         interp = fitting.Polynomial1DFit(2)
