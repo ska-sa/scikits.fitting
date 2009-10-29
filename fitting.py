@@ -648,6 +648,40 @@ class Polynomial2DFit(ScatterFit):
 #--- CLASS :  PiecewisePolynomial1DFit
 #----------------------------------------------------------------------------------------------------------------------
 
+def _linear_interp(xi, yi, x):
+    """Linearly interpolate (or extrapolate) (xi, yi) values to x positions.
+
+    Given a set of N ``(x, y)`` points, provided in the *xi* and *yi* arrays,
+    this will calculate ``y``-coordinate values for a set of M ``x``-coordinates
+    provided in the *x* array, using linear interpolation and extrapolation.
+
+    Parameters
+    ----------
+    xi : array, shape (N,)
+        Array of fixed x-coordinates, sorted in ascending order and with no
+        duplicate values
+    yi : array, shape (N,)
+        Corresponding array of fixed y-coordinates
+    x : array, shape (M,)
+        Array of x-coordinates at which to do interpolation of y-values
+
+    Returns
+    -------
+    y : array, shape (M,)
+        Array of interpolated y-values
+
+    """
+    # Find lowest xi value >= x (end of segment containing x)
+    end = xi.searchsorted(x)
+    # Associate any x found outside xi range with closest segment (first or last one)
+    # This linearly extrapolates the first and last segment to -inf and +inf, respectively
+    end[end == 0] += 1
+    end[end == len(xi)] -= 1
+    start = end - 1
+    # Set up weight such that xi[start] => 0 and xi[end] => 1
+    end_weight = (x - xi[start]) / (xi[end] - xi[start])
+    return (1.0 - end_weight) * yi[start] + end_weight * yi[end]
+
 class PiecewisePolynomial1DFit(ScatterFit):
     """Fit piecewise polynomial to 1-D data.
 
@@ -679,10 +713,6 @@ class PiecewisePolynomial1DFit(ScatterFit):
     """
     def __init__(self, max_degree=3):
         ScatterFit.__init__(self)
-        try:
-            scipy.interpolate.PiecewisePolynomial
-        except AttributeError:
-            raise ImportError("scipy.interpolate.PiecewisePolynomial class not found - you need SciPy 0.7.0 or newer")
         self.max_degree = max_degree
         self._poly = None
 
@@ -728,7 +758,14 @@ class PiecewisePolynomial1DFit(ScatterFit):
         if len(x) == 1:
             self._poly = lambda x: y[0]
         else:
-            self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
+            try:
+                self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
+            except AttributeError:
+                if self.max_degree > 1:
+                    raise ImportError("SciPy 0.7.0 or newer needed for higher-order piecewise polynomials")
+                else:
+                    # Fall back to home-brewed linear interpolator for older SciPy installation
+                    self._poly = lambda new_x: _linear_interp(x, y, np.asarray(new_x))
 
     def __call__(self, x):
         """Evaluate piecewise polynomial on new data.

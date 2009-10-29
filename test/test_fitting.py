@@ -33,7 +33,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
 
     def setUp(self):
         self.poly = np.array([1.0, 2.0, 3.0, 4.0])
-        self.x = np.arange(-3.0, 2.0, 0.2)
+        self.x = np.linspace(-3.0, 2.0, 100)
         self.y = np.polyval(self.poly, self.x)
 
     def test_fit_eval(self):
@@ -42,7 +42,16 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         self.assertRaises(ValueError, interp.fit, [0, 0], [1, 2])
         interp.fit(self.x[::2], self.y[::2])
         y = interp(self.x)
-        np.testing.assert_almost_equal(y[2:-2], self.y[2:-2], decimal=10)
+        np.testing.assert_almost_equal(y[5:-5], self.y[5:-5], decimal=10)
+
+    def test_linear_interp(self):
+        x = np.sort(np.random.rand(100)) * 4. - 2.5
+        y = np.random.randn(100)
+        interp = fitting.PiecewisePolynomial1DFit(max_degree=1)
+        interp.fit(x, y)
+        np.testing.assert_almost_equal(interp(x), y, decimal=10)
+        np.testing.assert_almost_equal(fitting._linear_interp(x, y, x), y, decimal=10)
+        np.testing.assert_almost_equal(interp(self.x), fitting._linear_interp(x, y, self.x), decimal=10)
 
 class ReciprocalFitTestCases(unittest.TestCase):
     """Check the ReciprocalFit class."""
