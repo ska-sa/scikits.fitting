@@ -3,6 +3,7 @@
 
 import unittest
 import numpy as np
+import scipy.interpolate
 from scape import fitting
 
 class Polynomial1DFitTestCases(unittest.TestCase):
@@ -37,6 +38,11 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         self.y = np.polyval(self.poly, self.x)
 
     def test_fit_eval(self):
+        # Ignore test if SciPy version is below 0.7.0
+        try:
+            scipy.interpolate.PiecewisePolynomial
+        except AttributeError:
+            return
         interp = fitting.PiecewisePolynomial1DFit(max_degree=3)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, [0, 0], [1, 2])
