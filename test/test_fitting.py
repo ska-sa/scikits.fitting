@@ -319,8 +319,8 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         interp.fit(self.x, self.y)
         y = interp(self.x)
         testy = interp(self.testx)
-        np.testing.assert_almost_equal(y, self.y, decimal=10)
-        np.testing.assert_almost_equal(testy, self.testy, decimal=10)
+        np.testing.assert_almost_equal(y, self.y, decimal=9)
+        np.testing.assert_almost_equal(testy, self.testy, decimal=9)
 
 class RbfScatterFitTestCases(unittest.TestCase):
     """Check the RbfScatterFit class (only if Rbf is installed in SciPy)."""
