@@ -50,6 +50,17 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         y = interp(self.x)
         np.testing.assert_almost_equal(y[5:-5], self.y[5:-5], decimal=10)
 
+    def test_stepwise_interp(self):
+        x = np.sort(np.random.rand(100)) * 4. - 2.5
+        y = np.random.randn(100)
+        interp = fitting.PiecewisePolynomial1DFit(max_degree=0)
+        interp.fit(x, y)
+        np.testing.assert_almost_equal(interp(x), y, decimal=10)
+        np.testing.assert_almost_equal(interp(x + 1e-15), y, decimal=10)
+        np.testing.assert_almost_equal(interp(x - 1e-15), y, decimal=10)
+        np.testing.assert_almost_equal(fitting._stepwise_interp(x, y, x), y, decimal=10)
+        np.testing.assert_almost_equal(interp(self.x), fitting._stepwise_interp(x, y, self.x), decimal=10)
+
     def test_linear_interp(self):
         x = np.sort(np.random.rand(100)) * 4. - 2.5
         y = np.random.randn(100)

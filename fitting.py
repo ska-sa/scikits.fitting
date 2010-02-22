@@ -648,6 +648,73 @@ class Polynomial2DFit(ScatterFit):
 #--- CLASS :  PiecewisePolynomial1DFit
 #----------------------------------------------------------------------------------------------------------------------
 
+def _stepwise_interp(xi, yi, x):
+    """Step-wise interpolate (or extrapolate) (xi, yi) values to x positions.
+
+    Given a set of N ``(x, y)`` points, provided in the *xi* and *yi* arrays,
+    this will calculate ``y``-coordinate values for a set of M ``x``-coordinates
+    provided in the *x* array, using step-wise (zeroth-order) interpolation and
+    extrapolation.
+
+    The input *x* coordinates are compared to the fixed *xi* values, and the
+    largest *xi* value smaller than or approximately equal to each *x* value is
+    selected. The corresponding *yi* value is then returned. For *x* values
+    below the entire set of *xi* values, the smallest *xi* value is selected.
+    The steps of the interpolation therefore start at each *xi* value and extends
+    to the right (above it) until the next bigger *xi*, except for the first
+    step, which extends to the left (below it) as well, and the last step, which
+    extends until positive infinity.
+
+    Parameters
+    ----------
+    xi : array, shape (N,)
+        Array of fixed x-coordinates, sorted in ascending order and with no
+        duplicate values
+    yi : array, shape (N,)
+        Corresponding array of fixed y-coordinates
+    x : array, shape (M,)
+        Array of x-coordinates at which to do interpolation of y-values
+
+    Returns
+    -------
+    y : array, shape (M,)
+        Array of interpolated y-values
+
+    Notes
+    -----
+    The equality check of *x* values is approximate on purpose, to handle some
+    degree of numerical imprecision in floating-point values. This is important
+    for step-wise interpolation, as there are potentially large discontinuities
+    in *y* at the *xi* values, which makes it sensitive to small mismatches in
+    *x*. For continuous interpolation (linear and up) this is unnecessary.
+
+    """
+    # Find lowest xi value >= x (end of segment containing x)
+    end = xi.searchsorted(x)
+    # Associate any x smaller than smallest xi with closest segment (first one)
+    # This linearly extrapolates the first segment to -inf on the left
+    end[end == 0] += 1
+    start = end - 1
+    # *After* setting segment starts, associate any x bigger than biggest xi
+    # with the last segment (order important, otherwise last segment will be ignored)
+    end[end == len(xi)] -= 1
+
+    # First get largest "equality" difference tolerated for x and xi (set to zero for integer types)
+    try:
+        xi_smallest_diff = 20 * np.finfo(xi.dtype).resolution
+    except ValueError:
+        xi_smallest_diff = 0
+    try:
+        x_smallest_diff = 20 * np.finfo(x.dtype).resolution
+    except ValueError:
+        x_smallest_diff = 0
+    smallest_diff = max(x_smallest_diff, xi_smallest_diff)
+    # Find x that are exactly equal to some xi or slightly below it, which will assign it to the wrong segment
+    equal_or_just_below = xi[end] - x < smallest_diff
+    # Move these segments one higher (except for the last one, which stays put)
+    start[equal_or_just_below] = end[equal_or_just_below]
+    return yi[start]
+
 def _linear_interp(xi, yi, x):
     """Linearly interpolate (or extrapolate) (xi, yi) values to x positions.
 
@@ -690,10 +757,16 @@ class PiecewisePolynomial1DFit(ScatterFit):
     exactly through the given data points and may also match the local gradient
     at each point if the maximum polynomial degree, *max_degree*, is at least 3.
 
-    If *max_degree* is 1, linear interpolation is done between the points in the
-    data set. The resulting curve is continuous but has sharp corners at the
-    data points. If *max_degree* is 3, cubic interpolation is used and the
-    resulting is curve is smooth (up to the first derivative).
+    If *max_degree* is 0, step-wise interpolation is done between the points in
+    the data set. Each input *x* value is assigned the *y* value of the largest
+    *x* value in the data set that is smaller than or equal to the input *x*. If
+    the input *x* is smaller than all the *x* values in the data set, the *y*
+    value of the smallest data set *x* value is chosen instead.
+
+    If *max_degree* is 1, linear interpolation is done. The resulting curve is
+    continuous but has sharp corners at the data points. If *max_degree* is 3,
+    cubic interpolation is used and the resulting is curve is smooth (up to the
+    first derivative).
 
     This should primarily be used for interpolation between points and not for
     extrapolation outside the data range, which could lead to wildly inaccurate
@@ -702,9 +775,10 @@ class PiecewisePolynomial1DFit(ScatterFit):
     Parameters
     ----------
     max_degree : int
-        Maximum polynomial degree (>= 1) to use in each segment between data
-        points (automatically reduced if there are not enough data points or where
-        derivatives are not available, such as in the first and last segment)
+        Maximum polynomial degree (>= 0) to use in each segment between data
+        points (automatically reduced if there are not enough data points or
+        where derivatives are not available, such as in the first and last
+        segment)
 
     Notes
     -----
@@ -757,6 +831,9 @@ class PiecewisePolynomial1DFit(ScatterFit):
                 y_list[m + n].append(y_deriv[m])
         if len(x) == 1:
             self._poly = lambda x: y[0]
+        elif self.max_degree == 0:
+            # SciPy PiecewisePolynomial does not support degree 0 - use home-brewed interpolator instead
+            self._poly = lambda new_x: _stepwise_interp(x, y, np.asarray(new_x))
         else:
             try:
                 self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
