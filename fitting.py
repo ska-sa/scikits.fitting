@@ -701,10 +701,12 @@ def _stepwise_interp(xi, yi, x):
 
     # First get largest "equality" difference tolerated for x and xi (set to zero for integer types)
     try:
+        # pylint: disable-msg=E1101
         xi_smallest_diff = 20 * np.finfo(xi.dtype).resolution
     except ValueError:
         xi_smallest_diff = 0
     try:
+        # pylint: disable-msg=E1101
         x_smallest_diff = 20 * np.finfo(x.dtype).resolution
     except ValueError:
         x_smallest_diff = 0
@@ -808,8 +810,8 @@ class PiecewisePolynomial1DFit(ScatterFit):
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
         x = np.atleast_1d(np.array(x, dtype='double'))
-        # Only upcast y if numerical interpolation will actually happen - since stepwise interpolation simply copies
-        # y values, this allows interpolation of non-numeric types (e.g. strings)
+        # Only upcast y if numerical interpolation will actually happen - since stepwise interpolation
+        # simply copies y values, this allows interpolation of non-numeric types (e.g. strings)
         if (len(x) == 1) or (self.max_degree == 0):
             y = np.atleast_1d(np.array(y))
         else:
