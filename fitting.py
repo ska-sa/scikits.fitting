@@ -808,7 +808,12 @@ class PiecewisePolynomial1DFit(ScatterFit):
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
         x = np.atleast_1d(np.array(x, dtype='double'))
-        y = np.atleast_1d(np.array(y, dtype='double'))
+        # Only upcast y if numerical interpolation will actually happen - since stepwise interpolation simply copies
+        # y values, this allows interpolation of non-numeric types (e.g. strings)
+        if (len(x) == 1) or (self.max_degree == 0):
+            y = np.atleast_1d(np.array(y))
+        else:
+            y = np.atleast_1d(np.array(y, dtype='double'))
         # Sort x in ascending order, as PiecewisePolynomial expects sorted data
         x_ind = np.argsort(x)
         x, y = x[x_ind], y[x_ind]
@@ -817,20 +822,21 @@ class PiecewisePolynomial1DFit(ScatterFit):
         if np.any(np.diff(x) <= 0.0):
             raise ValueError("Two consecutive points have same x-coordinate - infinite gradient not allowed")
         # Maximum derivative order warranted by polynomial degree and number of data points
-        max_deriv = min((self.max_degree - 1) // 2, len(x) - 2)
-        if max_deriv > 0:
+        max_deriv = min((self.max_degree - 1) // 2, len(x) - 2) + 1
+        if max_deriv > 1:
             # Length of x interval straddling each data point (from previous to next point)
             x_interval = np.convolve(np.diff(x), [1.0, 1.0], 'valid')
             y_deriv = y
         # Recursively calculate the n'th derivative of y, up to maximum order
-        for n in xrange(1, max_deriv + 1):
+        for n in xrange(1, max_deriv):
             # The difference between (n-1)'th derivative of y at previous and next point, divided by interval
             y_deriv = np.convolve(np.diff(y_deriv), [1.0, 1.0], 'valid') / x_interval
             x_interval = x_interval[1:-1]
             for m in xrange(len(y_deriv)):
                 y_list[m + n].append(y_deriv[m])
         if len(x) == 1:
-            self._poly = lambda x: y[0]
+            # Constant interpolation to all new x values
+            self._poly = lambda new_x: np.tile(y[0], np.asarray(new_x).shape)
         elif self.max_degree == 0:
             # SciPy PiecewisePolynomial does not support degree 0 - use home-brewed interpolator instead
             self._poly = lambda new_x: _stepwise_interp(x, y, np.asarray(new_x))
