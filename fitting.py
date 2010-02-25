@@ -813,7 +813,7 @@ class PiecewisePolynomial1DFit(ScatterFit):
         # Only upcast y if numerical interpolation will actually happen - since stepwise interpolation
         # simply copies y values, this allows interpolation of non-numeric types (e.g. strings)
         if (len(x) == 1) or (self.max_degree == 0):
-            y = np.atleast_1d(np.array(y))
+            y = np.atleast_1d(y)
         else:
             y = np.atleast_1d(np.array(y, dtype='double'))
         # Sort x in ascending order, as PiecewisePolynomial expects sorted data
@@ -842,15 +842,14 @@ class PiecewisePolynomial1DFit(ScatterFit):
         elif self.max_degree == 0:
             # SciPy PiecewisePolynomial does not support degree 0 - use home-brewed interpolator instead
             self._poly = lambda new_x: _stepwise_interp(x, y, np.asarray(new_x))
+        elif self.max_degree == 1:
+            # Home-brewed linear interpolator is *way* faster than SciPy 0.7.0 PiecewisePolynomial
+            self._poly = lambda new_x: _linear_interp(x, y, np.asarray(new_x))
         else:
             try:
                 self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
             except AttributeError:
-                if self.max_degree > 1:
-                    raise ImportError("SciPy 0.7.0 or newer needed for higher-order piecewise polynomials")
-                else:
-                    # Fall back to home-brewed linear interpolator for older SciPy installation
-                    self._poly = lambda new_x: _linear_interp(x, y, np.asarray(new_x))
+                raise ImportError("SciPy 0.7.0 or newer needed for higher-order piecewise polynomials")
 
     def __call__(self, x):
         """Evaluate piecewise polynomial on new data.
