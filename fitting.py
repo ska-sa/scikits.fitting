@@ -672,12 +672,12 @@ def _stepwise_interp(xi, yi, x):
         duplicate values
     yi : array, shape (N,)
         Corresponding array of fixed y-coordinates
-    x : array, shape (M,)
+    x : float or array, shape (M,)
         Array of x-coordinates at which to do interpolation of y-values
 
     Returns
     -------
-    y : array, shape (M,)
+    y : float or array, shape (M,)
         Array of interpolated y-values
 
     Notes
@@ -690,7 +690,7 @@ def _stepwise_interp(xi, yi, x):
 
     """
     # Find lowest xi value >= x (end of segment containing x)
-    end = xi.searchsorted(x)
+    end = np.atleast_1d(xi.searchsorted(x))
     # Associate any x smaller than smallest xi with closest segment (first one)
     # This linearly extrapolates the first segment to -inf on the left
     end[end == 0] += 1
@@ -715,6 +715,8 @@ def _stepwise_interp(xi, yi, x):
     equal_or_just_below = xi[end] - x < smallest_diff
     # Move these segments one higher (except for the last one, which stays put)
     start[equal_or_just_below] = end[equal_or_just_below]
+    # Ensure that output y has same shape as input x (especially, let scalar input result in scalar output)
+    start = np.reshape(start, np.shape(x))
     return yi[start]
 
 def _linear_interp(xi, yi, x):
@@ -731,22 +733,24 @@ def _linear_interp(xi, yi, x):
         duplicate values
     yi : array, shape (N,)
         Corresponding array of fixed y-coordinates
-    x : array, shape (M,)
+    x : float or array, shape (M,)
         Array of x-coordinates at which to do interpolation of y-values
 
     Returns
     -------
-    y : array, shape (M,)
+    y : float or array, shape (M,)
         Array of interpolated y-values
 
     """
     # Find lowest xi value >= x (end of segment containing x)
-    end = xi.searchsorted(x)
+    end = np.atleast_1d(xi.searchsorted(x))
     # Associate any x found outside xi range with closest segment (first or last one)
     # This linearly extrapolates the first and last segment to -inf and +inf, respectively
     end[end == 0] += 1
     end[end == len(xi)] -= 1
     start = end - 1
+    # Ensure that output y has same shape as input x (especially, let scalar input result in scalar output)
+    start, end = np.reshape(start, np.shape(x)), np.reshape(end, np.shape(x))
     # Set up weight such that xi[start] => 0 and xi[end] => 1
     end_weight = (x - xi[start]) / (xi[end] - xi[start])
     return (1.0 - end_weight) * yi[start] + end_weight * yi[end]
@@ -856,13 +860,13 @@ class PiecewisePolynomial1DFit(ScatterFit):
 
         Parameters
         ----------
-        x : array-like, shape (M,)
-            Input to function as a 1-D numpy array, or sequence
+        x : float or array-like, shape (M,)
+            Input to function as a scalar, 1-D numpy array or sequence
 
         Returns
         -------
-        y : array, shape (M,)
-            Output of function as a 1-D numpy array
+        y : float or array, shape (M,)
+            Output of function as a scalar o 1-D numpy array
 
         """
         if self._poly is None:
