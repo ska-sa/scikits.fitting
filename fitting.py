@@ -510,7 +510,7 @@ class Polynomial1DFit(ScatterFit):
         y = np.atleast_1d(np.array(y, dtype='double'))
         # Polynomial fits perform better if input data is centred around origin [see numpy.polyfit help]
         self._mean = x.mean()
-        # Reduce polynomial degree if there is not enough points to fit (degree should be < len(x))
+        # Reduce polynomial degree if there are not enough points to fit (degree should be < len(x))
         self.poly = np.polyfit(x - self._mean, y, min((self.max_degree, len(x) - 1)), rcond = self._rcond)
 
     def __call__(self, x):

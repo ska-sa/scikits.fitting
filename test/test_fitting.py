@@ -13,6 +13,8 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         self.poly = np.array([1.0, -2.0, 1.0])
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
+        self.randx = np.random.randn(100)
+        self.randp = np.random.randn(4)
 
     def test_fit_eval(self):
         interp = fitting.Polynomial1DFit(2)
@@ -22,6 +24,18 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         self.assertAlmostEqual(interp._mean, 0.0, places=10)
         np.testing.assert_almost_equal(interp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
+
+    def test_vs_numpy(self):
+        x, p = self.randx - np.mean(self.randx), self.randp
+        y = p[0] * (x ** 3) + p[1] * (x ** 2) + p[2] * x + p[3]
+        interp = fitting.Polynomial1DFit(3)
+        interp.fit(x, y)
+        interp_y = interp(x)
+        np_poly = np.polyfit(x, y, 3)
+        np_y = np.polyval(np_poly, x)
+        self.assertAlmostEqual(interp._mean, 0.0, places=10)
+        np.testing.assert_almost_equal(interp.poly, np_poly, decimal=10)
+        np.testing.assert_almost_equal(interp_y, np_y, decimal=10)
 
     # pylint: disable-msg=R0201
     def test_reduce_degree(self):
