@@ -337,7 +337,7 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         xx1, xx0 = np.meshgrid(self.x[1], self.x[0])
         self.y = poly[0]*xx0*xx0 + poly[1]*xx0*xx1 + poly[2]*xx1*xx1
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
-        self.testx = [sorted(0.2*np.random.randn(8)), sorted(0.2*np.random.randn(12))]
+        self.testx = [sorted(0.1*np.random.randn(8)), sorted(0.1*np.random.randn(12))]
         testx1, testx0 = np.meshgrid(self.testx[1], self.testx[0])
         self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
 
