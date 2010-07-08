@@ -1538,13 +1538,19 @@ class Spline1DFit(ScatterFit):
         during fit() with the (x, y) data to fit as parameters, and should
         return an array of shape (N,) representing the standard deviation of
         each sample in *y*.
+    min_size : float, optional
+        Size of smallest features to fit in the data, expressed in units of *x*.
+        This determines the smoothness of fitted spline. Roughly stated, any
+        oscillation in the fitted curve will have a period bigger than *min_size*.
+        Works best if *x* is uniformly spaced. If set, this overrides *std_y*.
     method : string, optional
         Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
 
     """
-    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(y)), method='UnivariateSpline', **kwargs):
+    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(y)), min_size=0.0,
+                 method='UnivariateSpline', **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
         try:
@@ -1556,6 +1562,8 @@ class Spline1DFit(ScatterFit):
                                        if name.find('UnivariateSpline') >= 0]))
         # Standard deviation of y
         self._std_y = std_y
+        # Size of smallest features to fit
+        self._min_size = min_size
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
@@ -1585,6 +1593,21 @@ class Spline1DFit(ScatterFit):
             sort_ind = x.argsort()
             x = x[sort_ind]
             y = y[sort_ind]
+        # Deduce standard deviation of y, based on specified size of smallest features
+        if self._min_size > 0.0:
+            # Number of samples, and sample period (assuming samples are uniformly spaced in x)
+            N, xstep = len(x), np.abs(np.mean(np.diff(x)))
+            # Convert feature size to digital frequency (based on k / N = Ts / T using FFT notation).
+            # The frequency index k is clipped so that k > 0, to avoid including DC power in stdev calc
+            # (i.e. slowest oscillation is N samples), and k <= N / 2, which represents a 2-sample oscillation.
+            min_freq_ind = np.clip(int(np.round(N * xstep / self._min_size)), 1, N // 2)
+            # Find power in signal above the minimum cutoff frequency using periodogram
+            # Reduce spectral leakage resulting from edge effects by removing DC and windowing the signal
+            window = np.hamming(N)
+            periodo = (np.abs(np.fft.fft((y - y.mean()) * window)) ** 2) / (window ** 2).sum()
+            periodo[1:(N // 2)] *= 2.0
+            high_freq_std_y = np.sqrt(np.sum(periodo[min_freq_ind:(N // 2 + 1)]) / N)
+            self._std_y = lambda x, y: np.tile(high_freq_std_y, N)
         self._interp = self._spline_class(x, y, w=1.0 / self._std_y(x, y), k=self.degree, **self._extra_args)
 
     def __call__(self, x):
