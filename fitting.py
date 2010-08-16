@@ -1525,9 +1525,9 @@ class GaussianFit(ScatterFit):
 class Spline1DFit(ScatterFit):
     """Fit a B-spline to 1-D data.
 
-    This uses the spline classes in :mod:`scipy.interpolate`, which is based on
-    Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``curfit``
-    for fitting and ``splev`` for evaluation).
+    This wraps :class:`scipy.interpolate.UnivariateSpline`, which is based on
+    Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``curfit`` for
+    fitting and ``splev`` for evaluation).
 
     Parameters
     ----------
@@ -1543,23 +1543,13 @@ class Spline1DFit(ScatterFit):
         This determines the smoothness of fitted spline. Roughly stated, any
         oscillation in the fitted curve will have a period bigger than *min_size*.
         Works best if *x* is uniformly spaced. If set, this overrides *std_y*.
-    method : string, optional
-        Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
 
     """
-    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(y)), min_size=0.0,
-                 method='UnivariateSpline', **kwargs):
+    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(y)), min_size=0.0, **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
-        try:
-            # Underlying spline class
-            self._spline_class = scipy.interpolate.__dict__[method]
-        except KeyError:
-            raise ValueError('Spline class "' + method + '" unknown - should be one of: ' +
-                             ' '.join([name for name in scipy.interpolate.__dict__.iterkeys()
-                                       if name.find('UnivariateSpline') >= 0]))
         # Standard deviation of y
         self._std_y = std_y
         # Size of smallest features to fit
@@ -1608,7 +1598,8 @@ class Spline1DFit(ScatterFit):
             periodo[1:(N // 2)] *= 2.0
             high_freq_std_y = np.sqrt(np.sum(periodo[min_freq_ind:(N // 2 + 1)]) / N)
             self._std_y = lambda x, y: np.tile(high_freq_std_y, N)
-        self._interp = self._spline_class(x, y, w=1.0 / self._std_y(x, y), k=self.degree, **self._extra_args)
+        self._interp = scipy.interpolate.UnivariateSpline(x, y, w=1.0 / self._std_y(x, y), k=self.degree,
+                                                          **self._extra_args)
 
     def __call__(self, x):
         """Evaluate spline on new data.
@@ -1636,8 +1627,8 @@ class Spline1DFit(ScatterFit):
 class Spline2DScatterFit(ScatterFit):
     """Fit a B-spline to scattered 2-D data.
 
-    This uses the spline classes in :mod:`scipy.interpolate`, which is based on
-    Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``surfit`` for
+    This wraps :class:`scipy.interpolate.SmoothBivariateSpline`, which is based
+    on Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``surfit`` for
     fitting and ``bispev`` for evaluation). The 2-D ``x`` coordinates do not
     have to lie on a regular grid, and can be in any order.
 
@@ -1650,23 +1641,13 @@ class Spline2DScatterFit(ScatterFit):
         during fit() with the (x, y) data to fit as parameters, and should
         return an array of shape (N,) representing the standard deviation of
         each sample in *y*.
-    method : string, optional
-        Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
 
     """
-    def __init__(self, degree=(3, 3), std_y=lambda x, y: np.tile(1.0, len(y)),
-                 method='SmoothBivariateSpline', **kwargs):
+    def __init__(self, degree=(3, 3), std_y=lambda x, y: np.tile(1.0, len(y)), **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
-        try:
-            # Underlying spline class
-            self._spline_class = scipy.interpolate.__dict__[method]
-        except KeyError:
-            raise ValueError('Spline class "' + method + r'" unknown - should be one of: ' +
-                             ' '.join([name for name in scipy.interpolate.__dict__.iterkeys()
-                                       if name.find('BivariateSpline') >= 0]))
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
         # Standard deviation of y
@@ -1698,8 +1679,8 @@ class Spline2DScatterFit(ScatterFit):
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError("Not enough data points for spline fit: requires at least %d, only got %d" %
                              ((self.degree[0] + 1) * (self.degree[1] + 1), y.size))
-        self._interp = self._spline_class(x[0], x[1], y, w=1.0 / self._std_y(x, y),
-                                          kx=self.degree[0], ky=self.degree[1], **self._extra_args)
+        self._interp = scipy.interpolate.SmoothBivariateSpline(x[0], x[1], y, w=1.0 / self._std_y(x, y),
+                                                              kx=self.degree[0], ky=self.degree[1], **self._extra_args)
 
     def __call__(self, x):
         """Evaluate spline on new scattered data.
@@ -1731,7 +1712,7 @@ class Spline2DScatterFit(ScatterFit):
 class Spline2DGridFit(GridFit):
     """Fit a B-spline to 2-D data on a rectangular grid.
 
-    This uses the spline classes in :mod:`scipy.interpolate`, which is based on
+    This wraps :mod:`scipy.interpolate.RectBivariateSpline`, which is based on
     Paul Dierckx's DIERCKX (or FITPACK) routines (specifically ``regrid`` for
     fitting and ``bispev`` for evaluation). The 2-D ``x`` coordinates define a
     rectangular grid. They do not have to be in ascending order, as both the
@@ -1741,22 +1722,13 @@ class Spline2DGridFit(GridFit):
     ----------
     degree : sequence of 2 ints, optional
         Degree (1-5) of spline in x and y directions
-    method : string, optional
-        Spline class (name of corresponding :mod:`scipy.interpolate` class)
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
 
     """
-    def __init__(self, degree=(3, 3), method='RectBivariateSpline', **kwargs):
+    def __init__(self, degree=(3, 3), **kwargs):
         GridFit.__init__(self)
         self.degree = degree
-        try:
-            # Underlying spline class
-            self._spline_class = scipy.interpolate.__dict__[method]
-        except KeyError:
-            raise ValueError('Spline class "' + method + r'" unknown - should be one of: ' +
-                             ' '.join([name for name in scipy.interpolate.__dict__.iterkeys()
-                                       if name.find('BivariateSpline') >= 0]))
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
@@ -1792,7 +1764,8 @@ class Spline2DGridFit(GridFit):
                              ((self.degree[0] + 1) * (self.degree[1] + 1), y.size))
         # Ensure that 'x' and 'y' coordinates are both in ascending order (requirement of underlying regrid)
         xs, ys, zs = sort_grid(x[0], x[1], y)
-        self._interp = self._spline_class(xs, ys, zs, kx=self.degree[0], ky=self.degree[1], **self._extra_args)
+        self._interp = scipy.interpolate.RectBivariateSpline(xs, ys, zs, kx=self.degree[0], ky=self.degree[1],
+                                                             **self._extra_args)
 
     def __call__(self, x):
         """Evaluate spline on a new rectangular grid.
