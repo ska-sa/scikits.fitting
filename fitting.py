@@ -29,6 +29,7 @@ Scatter fitters
 ---------------
 
 - :class:`ScatterFit` : Abstract base class for scatter fitters
+- :class:`LinearLeastSquaresFit` : Fit linear regression model to data using SVD
 - :class:`Polynomial1DFit` : Fit polynomial to 1-D data
 - :class:`Polynomial2DFit` : Fit polynomial to 2-D data
 - :class:`PiecewisePolynomial1DFit` : Fit piecewise polynomial to 1-D data
@@ -463,13 +464,143 @@ class GridFit(object):
         raise NotImplementedError
 
 #----------------------------------------------------------------------------------------------------------------------
+#--- CLASS :  LinearLeastSquaresFit
+#----------------------------------------------------------------------------------------------------------------------
+
+class LinearLeastSquaresFit(ScatterFit):
+    """Fit linear regression model to data using the SVD.
+
+    This fits a linear function of the form :math:`y = p^T x` to a sequence of N
+    P-dimensional input vectors :math:`x` and a corresponding sequence of N
+    output measurements :math:`y`. The input to the fitter is presented as an
+    input *design matrix* :math:`X` of shape (P, N) and an N-dimensional output
+    *measurement vector* :math:`y`. The P-dimensional *parameter vector*
+    :math:`p` is determined by the fitting procedure. The fitter can make use of
+    uncertainties on the `y` measurements and also produces a covariance matrix
+    for the parameters. The number of parameters, P, is determined by the shape
+    of :math:`X` when :meth:`fit` is called.
+
+    Parameters
+    ----------
+    rcond : float or None, optional
+        Relative condition number of the fit. Singular values smaller than this
+        relative to the largest singular value will be ignored. The default
+        value is N * eps, where eps is the relative precision of the float
+        type, about 2e-16 in most cases, and N is length of output vector `y`.
+
+    Attributes
+    ----------
+    params : array of float, shape (P,)
+        Fitted parameter vector
+    cov_params : array of float, shape (P, P)
+        Standard covariance matrix of parameters
+
+    Notes
+    -----
+    The :meth:`fit` method finds the optimal parameter vector :math:`p` that
+    minimises the sum of squared weighted residuals, given by
+
+    .. math:: \chi^2 = \sum_{i=1}^N \left[\frac{y_i - \sum_{j=1}^P p_j x_{ji}}{\sigma_i}\right]^2
+
+    where :math:`x_{ji}` are the elements of the design matrix :math:`X` and
+    :math:`\sigma_i` is the uncertainty associated with measurement :math:`y_i`.
+    The problem is solved using the singular-value decomposition (SVD) of the
+    design matrix, based on the description in Section 15.4 of [1]_. This gives
+    the same parameter solution as the NumPy function :func:`numpy.linalg.lstsq`,
+    but also provides the covariance matrix of the parameters.
+
+    .. [1] Press, Teukolsky, Vetterling, Flannery, "Numerical Recipes in C,"
+       Second Edition, 1992.
+
+    """
+    def __init__(self, rcond=None):
+        ScatterFit.__init__(self)
+        self.rcond = rcond
+        self.params = None
+        self.cov_params = None
+
+    def fit(self, x, y, std_y=1.0):
+        """Fit linear regression model to x-y data using the SVD.
+
+        Parameters
+        ----------
+        x : array-like, shape (P, N)
+            Known input values as design matrix (one row per desired parameter)
+        y : array-like, shape (N,)
+            Known output measurements as sequence or numpy array
+        std_y : float or array-like, shape (N,), optional
+            Measurement error or uncertainty of `y` values, expressed as standard
+            deviation in units of `y`
+
+        """
+        x = np.atleast_2d(np.asarray(x))
+        y = np.atleast_1d(np.asarray(y))
+        # Convert uncertainty into array of shape (N,)
+        if np.isscalar(std_y):
+            std_y = np.tile(std_y, y.shape)
+        std_y = np.atleast_1d(np.asarray(std_y))
+        # Lower bound on uncertainty is determined by floating-point resolution (no upper bound)
+        np.clip(std_y, max(np.mean(np.abs(y)), 1e-20) * np.finfo(y.dtype).eps, np.inf, out=std_y)
+        # Normalise uncertainty to avoid numerical blow-up (only relative uncertainty matters for parameter solution)
+        max_std_y = std_y.max()
+        std_y /= max_std_y
+        # Weight design matrix columns and output vector by `y` uncertainty
+        A = x / std_y[np.newaxis, :]
+        b = y / std_y
+        # Perform SVD on A, which is transpose of usual design matrix - let A^T = Ur S V^T to correspond with NRinC
+        # Shapes: A ~ PxN, b ~ N, V ~ PxP, s ~ P, S = diag(s) ~ PxP, "reduced U" Ur ~ NxP and Urt = Ur^T ~ PxN
+        V, s, Urt = np.linalg.svd(A, full_matrices=False)
+        # Set all "small" singular values below this relative cutoff equal to zero
+        s_cutoff = len(x) * np.finfo(x.dtype).eps * s[0] if self.rcond is None else self.rcond * s[0]
+        # Warn if the effective rank < P (i.e. some singular values are considered to be zero)
+        if np.any(s < s_cutoff):
+            logger.warn('Least-squares fit may be poorly conditioned')
+        # Invert zero singular values to infinity, as we are actually interested in reciprocal of s,
+        # and zero singular values should be replaced by zero reciprocal values a la pseudo-inverse
+        s[s < s_cutoff] = np.inf
+        # Solve linear least-squares problem using SVD (see NRinC, 2nd ed, Eq. 15.4.17)
+        # In matrix form: p = V S^(-1) Ur^T b = Vs Ur^T b, where Vs = V S^(-1)
+        Vs = V / s[np.newaxis, :]
+        self.params = np.dot(Vs, np.dot(Urt, b))
+        # Also obtain covariance matrix of parameters (see NRinC, 2nd ed, Eq. 15.4.20)
+        # In matrix form: Cp = V S^(-2) V^T = Vs Vs^T (also rescaling with max std_y)
+        self.cov_params = np.dot(Vs, Vs.T) * (max_std_y ** 2)
+
+    def __call__(self, x, full_output=False):
+        """Evaluate linear regression model on new x data.
+
+        Parameters
+        ----------
+        x : array-like, shape (P, M)
+            New input values as design matrix (one row per fitted parameter)
+        full_output : {False, True}, optional
+            True if output uncertainty should also be returned
+
+        Returns
+        -------
+        y : array, shape (M,)
+            Corresponding output of function as a numpy array
+        std_y : array, shape (M,), optional
+            Uncertainty of function output, expressed as standard deviation
+
+        """
+        if (self.params is None) or (self.cov_params is None):
+            raise NotFittedError("Linear regression model not fitted to data yet - first call .fit method")
+        A = np.atleast_2d(np.asarray(x))
+        y = np.dot(self.params, A)
+        return (y, np.sqrt(np.sum(A * np.dot(self.cov_params, A), axis=0))) if full_output else y
+
+#----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  Polynomial1DFit
 #----------------------------------------------------------------------------------------------------------------------
 
 class Polynomial1DFit(ScatterFit):
     """Fit polynomial to 1-D data.
 
-    This uses numpy's polyfit and polyval.
+    This is built on top of :class:`LinearLeastSquaresFit`. It improves on the
+    standard NumPy :func:`numpy.polyfit` routine by automatically centring the
+    data, handling measurement uncertainty and calculating the resulting
+    parameter covariance matrix.
 
     Parameters
     ----------
@@ -480,21 +611,44 @@ class Polynomial1DFit(ScatterFit):
         Relative condition number of fit (smallest singular value that will be
         used to fit polynomial, has sensible default)
 
-    Arguments
-    ---------
-    poly : real array
+    Attributes
+    ----------
+    poly : array of float, shape (P,)
         Polynomial coefficients (highest order first), only set after :func:`fit`
+    cov_poly : array of float, shape (P, P)
+        Covariance matrix of coefficients, only set after :func:`fit`
+    x_mean : float
+        Mean `x` value used to centre the data, only set after :func:`fit`
 
     """
     def __init__(self, max_degree, rcond=None):
         ScatterFit.__init__(self)
         self.max_degree = max_degree
-        self._rcond = rcond
-        # Mean of input data, only set after :func:`fit`
-        self._mean = None
+        self._lstsq = LinearLeastSquaresFit(rcond)
+        # The following attributes are only set after :func:`fit`
         self.poly = None
+        self.cov_poly = None
+        self.x_mean = None
 
-    def fit(self, x, y):
+    def _regressor(self, x):
+        """Form normalised regressor / design matrix from input vector.
+
+        The design matrix is Vandermonde for polynomial regression.
+
+        Parameters
+        ----------
+        x : array of float, shape (N,)
+            Input to function as a numpy array
+
+        Returns
+        -------
+        X : array of float, shape (P, N)
+            Regressor / design matrix to be used in least-squares fit
+
+        """
+        return np.vander(x - self.x_mean, len(self.poly)).T
+
+    def fit(self, x, y, std_y=1.0):
         """Fit polynomial to data.
 
         Parameters
@@ -503,34 +657,46 @@ class Polynomial1DFit(ScatterFit):
             Known input values as a 1-D numpy array or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
+        std_y : float or array-like, shape (N,), optional
+            Measurement error or uncertainty of `y` values, expressed as standard
+            deviation in units of `y`
 
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
-        x = np.atleast_1d(np.array(x, dtype='double'))
-        y = np.atleast_1d(np.array(y, dtype='double'))
+        x = np.atleast_1d(np.asarray(x, dtype='double'))
+        y = np.atleast_1d(np.asarray(y, dtype='double'))
         # Polynomial fits perform better if input data is centred around origin [see numpy.polyfit help]
-        self._mean = x.mean()
+        self.x_mean = x.mean()
         # Reduce polynomial degree if there are not enough points to fit (degree should be < len(x))
-        self.poly = np.polyfit(x - self._mean, y, min((self.max_degree, len(x) - 1)), rcond = self._rcond)
+        degree = min(self.max_degree, len(x) - 1)
+        # Initialise parameter vector, as its length is used to create design matrix of right shape in _regressor
+        self.poly = np.zeros(degree + 1)
+        # Solve least-squares regression problem
+        self._lstsq.fit(self._regressor(x), y, std_y)
+        self.poly = self._lstsq.params
+        self.cov_poly = self._lstsq.cov_params
 
-    def __call__(self, x):
+    def __call__(self, x, full_output=False):
         """Evaluate polynomial on new data.
 
         Parameters
         ----------
-        x : array-like, shape (M,)
+        x : array-like of float, shape (M,)
             Input to function as a 1-D numpy array, or sequence
+        full_output : {False, True}, optional
+            True if output uncertainty should also be returned
 
         Returns
         -------
-        y : array, shape (M,)
+        y : array of float, shape (M,)
             Output of function as a 1-D numpy array
+        std_y : array of float, shape (M,), optional
+            Uncertainty of function output, expressed as standard deviation
 
         """
-        if (self.poly is None) or (self._mean is None):
+        if (self.poly is None) or (self.x_mean is None):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
-        x = np.atleast_1d(np.asarray(x))
-        return np.polyval(self.poly, x - self._mean)
+        return self._lstsq(self._regressor(x), full_output)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  Polynomial2DFit
@@ -539,50 +705,64 @@ class Polynomial1DFit(ScatterFit):
 class Polynomial2DFit(ScatterFit):
     """Fit polynomial to 2-D data.
 
-    This extends :func:`numpy.polyfit` and :func:`numpy.polyval` to 2 dimensions.
-    The 2-D polynomial has (degrees[0] + 1) * (degrees[1] + 1) coefficients.
+    This models the one-dimensional (scalar) `y` data as a polynomial function
+    of the two-dimensional (vector) `x` data. The 2-D polynomial has
+    P = (degrees[0] + 1) * (degrees[1] + 1) coefficients. This fitter is built
+    on top of :class:`LinearLeastSquaresFit`.
 
     Parameters
     ----------
     degrees : list of 2 ints
         Non-negative polynomial degree to use for each dimension of *x*
+    rcond : float, optional
+        Relative condition number of fit (smallest singular value that will be
+        used to fit polynomial, has sensible default)
 
-    Arguments
-    ---------
-    poly : real array, shape ((degrees[0] + 1) * (degrees[1] + 1),)
+    Attributes
+    ----------
+    poly : array of float, shape (P,)
         Polynomial coefficients (highest order first), only set after :func:`fit`
+    cov_poly : array of float, shape (P, P)
+        Covariance matrix of coefficients, only set after :func:`fit`
+    x_mean : array of 2 floats
+        Mean `x` value used to centre the data, only set after :func:`fit`
+    x_scale : array of 2 floats
+        Max `x` deviation used to scale the data, only set after :func:`fit`
 
     """
-    def __init__(self, degrees):
+    def __init__(self, degrees, rcond=None):
         ScatterFit.__init__(self)
         self.degrees = degrees
-        # Mean and scale of input data, only set after :func:`fit`
-        self._mean = None
-        self._scale = None
+        # Underlying least-squares fitter
+        self._lstsq = LinearLeastSquaresFit(rcond)
+        # The following attributes are only set after :func:`fit`
         self.poly = None
+        self.cov_poly = None
+        self.x_mean = None
+        self.x_scale = None
 
     def _regressor(self, x):
-        """Form normalised regressor matrix from set of input vectors.
+        """Form normalised regressor / design matrix from set of input vectors.
 
         Parameters
         ----------
-        x : array, shape (2, N)
+        x : array of float, shape (2, N)
             Input to function as a 2-D numpy array
 
         Returns
         -------
-        X : array, shape (N, (degrees[0] + 1) * (degrees[1] + 1))
-            Regressor matrix
+        X : array of float, shape (P, N)
+            Regressor / design matrix to be used in least-squares fit
 
         Notes
         -----
         This normalises the 2-D input vectors by centering and scaling them.
-        It then forms a regressor matrix with a row per input vector. Each row
-        is given by the outer product of the monomials of the first dimension
-        with the monomials of the second dimension of the input vector, in
-        decreasing polynomial order. For example, if *degrees* is (1, 2) and
-        the elements of each input vector in *x* are *x_0* and *x_1*,
-        respectively, the row takes the form::
+        It then forms a regressor matrix with a column per input vector. Each
+        column is given by the outer product of the monomials of the first
+        dimension with the monomials of the second dimension of the input vector,
+        in decreasing polynomial order. For example, if *degrees* is (1, 2) and
+        the normalised elements of each input vector in *x* are *x_0* and *x_1*,
+        respectively, the column takes the form::
 
             outer([x_0, 1], [x1 ^ 2, x1, 1])
             = [x_0 * x_1 ^ 2, x_0 * x_1, x_0 * 1, 1 * x_1 ^ 2, 1 * x_1, 1 * 1]
@@ -591,12 +771,12 @@ class Polynomial2DFit(ScatterFit):
         This is closely related to the Vandermonde matrix of *x*.
 
         """
-        x_norm = (x - self._mean[:, np.newaxis]) / self._scale[:, np.newaxis]
+        x_norm = (x - self.x_mean[:, np.newaxis]) / self.x_scale[:, np.newaxis]
         v1 = np.vander(x_norm[0], self.degrees[0] + 1)
-        v2 = np.vander(x_norm[1], self.degrees[1] + 1)
-        return np.hstack([v1[:, n][:, np.newaxis] * v2 for n in xrange(v1.shape[1])])
+        v2 = np.vander(x_norm[1], self.degrees[1] + 1).T
+        return np.vstack([v1[:, n][np.newaxis, :] * v2 for n in xrange(v1.shape[1])])
 
-    def fit(self, x, y):
+    def fit(self, x, y, std_y=1.0):
         """Fit polynomial to data.
 
         This fits a polynomial defined on 2-D data to the provided (x, y)
@@ -609,40 +789,44 @@ class Polynomial2DFit(ScatterFit):
             Known input values as a 2-D numpy array, or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
+        std_y : float or array-like, shape (N,), optional
+            Measurement error or uncertainty of `y` values, expressed as standard
+            deviation in units of `y`
 
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
         x = np.atleast_2d(np.array(x, dtype='double'))
         y = np.atleast_1d(np.array(y, dtype='double'))
         # Polynomial fits perform better if input data is centred around origin and scaled [see numpy.polyfit help]
-        self._mean = x.mean(axis=1)
-        self._scale = np.abs(x - self._mean[:, np.newaxis]).max(axis=1)
-        self._scale[self._scale == 0.0] = 1.0
+        self.x_mean = x.mean(axis=1)
+        self.x_scale = np.abs(x - self.x_mean[:, np.newaxis]).max(axis=1)
+        self.x_scale[self.x_scale == 0.0] = 1.0
         # Solve least squares regression problem
-        results = np.linalg.lstsq(self._regressor(x), y)
-        poly, rank = results[0], results[2]
-        if rank != len(poly):
-            logger.warning('Polynomial fit may be poorly conditioned')
-        self.poly = poly
+        self._lstsq.fit(self._regressor(x), y, std_y)
+        self.poly = self._lstsq.params
+        self.cov_poly = self._lstsq.cov_params
 
-    def __call__(self, x):
+    def __call__(self, x, full_output=False):
         """Evaluate polynomial on new data.
 
         Parameters
         ----------
         x : array-like, shape (2, M)
             Input to function as a 2-D numpy array, or sequence
+        full_output : {False, True}, optional
+            True if output uncertainty should also be returned
 
         Returns
         -------
         y : array, shape (M,)
             Output of function as a 1-D numpy array
+        std_y : array of float, shape (M,), optional
+            Uncertainty of function output, expressed as standard deviation
 
         """
-        if (self.poly is None) or (self._mean is None):
+        if (self.poly is None) or (self.x_mean is None):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
-        x = np.atleast_2d(np.asarray(x))
-        return np.dot(self._regressor(x), self.poly)
+        return self._lstsq(self._regressor(x), full_output)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  PiecewisePolynomial1DFit

@@ -6,6 +6,85 @@ import numpy as np
 import scipy.interpolate
 from scape import fitting
 
+class UtilityFunctionTestCases(unittest.TestCase):
+    """Exercise utility functions."""
+
+    def setUp(self):
+        self.x = np.random.rand(2, 4, 10)
+
+    def test_squash(self):
+        """Test squash and unsquash."""
+        y1 = fitting.squash(self.x, [], True)
+        y1a = fitting.squash(self.x, None, True)
+        y2 = fitting.squash(self.x, (1), False)
+        y3 = fitting.squash(self.x, (0, 2), True)
+        y4 = fitting.squash(self.x, (0, 2), False)
+        y5 = fitting.squash(self.x, (0, 1, 2), True)
+        self.assertEqual(y1.shape, (2, 4, 10))
+        self.assertEqual(y1a.shape, (2, 4, 10))
+        self.assertEqual(y2.shape, (2, 10, 4))
+        self.assertEqual(y3.shape, (20, 4))
+        self.assertEqual(y4.shape, (4, 20))
+        self.assertEqual(y5.shape, (80,))
+        np.testing.assert_array_equal(fitting.unsquash(y1, [], (2, 4, 10), True), self.x)
+        np.testing.assert_array_equal(fitting.unsquash(y1a, None, (2, 4, 10), True), self.x)
+        np.testing.assert_array_equal(fitting.unsquash(y2, (1), (2, 4, 10), False), self.x)
+        np.testing.assert_array_equal(fitting.unsquash(y3, (0, 2), (2, 4, 10), True), self.x)
+        np.testing.assert_array_equal(fitting.unsquash(y4, (0, 2), (2, 4, 10), False), self.x)
+        np.testing.assert_array_equal(fitting.unsquash(y5, (0, 1, 2), (2, 4, 10), True), self.x)
+
+class LinearLeastSquaresFitTestCases(unittest.TestCase):
+    """Fit linear regression model to data from a known model, and compare."""
+
+    def setUp(self):
+        self.params = np.array([0.1, -0.2, 0.0, 0.5, 0.5])
+        self.N = 1000
+        self.x = np.random.randn(len(self.params), self.N)
+        self.y = np.dot(self.params, self.x)
+        t = np.arange(0., 10., 10. / self.N)
+        self.poly_x = np.vander(t, 5).T
+        self.poly_y = np.dot(self.params, self.poly_x)
+
+    def test_fit_eval(self):
+        """Basic function fitting and evaluation using data from a known function."""
+        interp = fitting.LinearLeastSquaresFit()
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        np.testing.assert_almost_equal(interp.params, self.params, decimal=10)
+        np.testing.assert_almost_equal(y, self.y, decimal=10)
+
+    def test_cov_params(self):
+        """Obtain sample statistics of parameters and compare to calculated covariance matrix."""
+        interp = fitting.LinearLeastSquaresFit()
+        std_y = 1.0
+        M = 200
+        param_set = np.zeros((len(self.params), M))
+        for n in range(M):
+            yn = self.poly_y + std_y * np.random.randn(len(self.poly_y))
+            interp.fit(self.poly_x, yn, std_y)
+            param_set[:, n] = interp.params
+        mean_params = param_set.mean(axis=1)
+        norm_params = param_set - mean_params[:, np.newaxis]
+        cov_params = np.dot(norm_params, norm_params.T) / M
+        std_params = np.sqrt(np.diag(interp.cov_params))
+        self.assertTrue((np.abs(mean_params - self.params) / std_params < 0.25).all(),
+                        "Sample mean parameter vector differs too much from true value")
+        self.assertTrue((np.abs(cov_params - interp.cov_params) / np.abs(interp.cov_params) < 0.5).all(),
+                        "Sample parameter covariance matrix differs too much from expected one")
+
+    def test_vs_numpy(self):
+        """Compare least-squares fitter to np.linalg.lstsq."""
+        interp = fitting.LinearLeastSquaresFit()
+        interp.fit(self.x, self.y)
+        params = np.linalg.lstsq(self.x.T, self.y)[0]
+        np.testing.assert_almost_equal(interp.params, params, decimal=10)
+        rcond = 1e-3
+        interp = fitting.LinearLeastSquaresFit(rcond)
+        interp.fit(self.poly_x, self.poly_y)
+        params = np.linalg.lstsq(self.poly_x.T, self.poly_y, rcond)[0]
+        np.testing.assert_almost_equal(interp.params, params, decimal=10)
+
 class Polynomial1DFitTestCases(unittest.TestCase):
     """Fit a 1-D polynomial to data from a known polynomial, and compare."""
 
@@ -17,15 +96,17 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         self.randp = np.random.randn(4)
 
     def test_fit_eval(self):
+        """Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Polynomial1DFit(2)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
-        self.assertAlmostEqual(interp._mean, 0.0, places=10)
+        self.assertAlmostEqual(interp.x_mean, 0.0, places=10)
         np.testing.assert_almost_equal(interp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
     def test_vs_numpy(self):
+        """Compare polynomial fitter to np.polyfit and np.polyval."""
         x, p = self.randx - np.mean(self.randx), self.randp
         y = p[0] * (x ** 3) + p[1] * (x ** 2) + p[2] * x + p[3]
         interp = fitting.Polynomial1DFit(3)
@@ -33,15 +114,40 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         interp_y = interp(x)
         np_poly = np.polyfit(x, y, 3)
         np_y = np.polyval(np_poly, x)
-        self.assertAlmostEqual(interp._mean, 0.0, places=10)
+        self.assertAlmostEqual(interp.x_mean, 0.0, places=10)
         np.testing.assert_almost_equal(interp.poly, np_poly, decimal=10)
         np.testing.assert_almost_equal(interp_y, np_y, decimal=10)
 
     # pylint: disable-msg=R0201
     def test_reduce_degree(self):
+        """Check that polynomial degree is reduced with too few data points."""
         interp = fitting.Polynomial1DFit(2)
         interp.fit([1.0], [1.0])
         np.testing.assert_almost_equal(interp.poly, [1.0], decimal=10)
+
+class Polynomial2DFitTestCases(unittest.TestCase):
+    """Fit a 2-D polynomial to data from a known polynomial, and compare."""
+
+    def setUp(self):
+        self.poly = np.array([0.1, -0.2, 0.3, -0.4, 0.5, -0.6])
+        x1 = np.arange(-1., 1.1, 0.1)
+        x2 = np.arange(-1., 1.2, 0.2)
+        xx1, xx2 = np.meshgrid(x1, x2)
+        self.x = X = np.vstack((xx1.ravel(), xx2.ravel()))
+        self.degrees = (1, 2)
+        A = np.c_[X[0] * X[1]**2, X[0] * X[1], X[0], X[1]**2, X[1], np.ones(X.shape[1])].T
+        self.y = np.dot(self.poly, A)
+
+    def test_fit_eval(self):
+        """Basic function fitting and evaluation using data from a known function."""
+        interp = fitting.Polynomial2DFit(self.degrees)
+        self.assertRaises(fitting.NotFittedError, interp, self.x)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        np.testing.assert_almost_equal(interp.x_mean, [0.0, 0.0], decimal=10)
+        np.testing.assert_almost_equal(interp.x_scale, [1.0, 1.0], decimal=10)
+        np.testing.assert_almost_equal(interp.poly, self.poly, decimal=10)
+        np.testing.assert_almost_equal(y, self.y, decimal=10)
 
 class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
     """Fit a 1-D piecewise polynomial to data from a known polynomial, and compare."""
@@ -101,7 +207,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
-        self.assertAlmostEqual(interp._interp._mean, 0.0, places=10)
+        self.assertAlmostEqual(interp._interp.x_mean, 0.0, places=10)
         np.testing.assert_almost_equal(interp._interp.poly, self.poly, decimal=10)
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
