@@ -694,6 +694,7 @@ class Polynomial1DFit(ScatterFit):
             Uncertainty of function output, expressed as standard deviation
 
         """
+        x = np.atleast_1d(np.asarray(x))
         if (self.poly is None) or (self.x_mean is None):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
         return self._lstsq(self._regressor(x), full_output)
@@ -824,6 +825,7 @@ class Polynomial2DFit(ScatterFit):
             Uncertainty of function output, expressed as standard deviation
 
         """
+        x = np.atleast_2d(np.asarray(x))
         if (self.poly is None) or (self.x_mean is None):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
         return self._lstsq(self._regressor(x), full_output)
@@ -1448,43 +1450,40 @@ class NonLinearLeastSquaresFit(ScatterFit):
     ----------
     func : function, signature ``y = f(p, x)``
         Generic function to be fit to x-y data (should be vectorised)
-    initial_params : sequence, length P
+    initial_params : array-like, shape (P,)
         Initial guess of function parameter vector *p*
     func_jacobian : function, signature ``J = g(p, x)``, optional
         Jacobian of function f, if available, where J has the shape (D_y, P),
         with D_y the normal ``y`` shape returned by the function
-    method : string, optional
-        Optimisation method (name of corresponding func:`scipy.optimize`
-        function)
     kwargs : dict, optional
-        Additional keyword arguments are passed to underlying optimiser
+        Additional keyword arguments are passed to underlying SciPy optimiser
 
-    Arguments
-    ---------
-    params : sequence, length P
-        Final optimal value for function parameter vector
-        (starts off as initial value)
+    Attributes
+    ----------
+    params : array of float, shape (P,)
+        Final optimal value for parameter vector (starts off as initial value)
+    cov_params : array of float, shape (P, P)
+        Standard covariance matrix of parameters, only set after :func:`fit`
+
+    Notes
+    -----
+    This uses the SciPy :func:`scipy.optimize.leastsq` routine to find the
+    optimal parameter vector using modified Levenberg-Marquardt optimisation.
 
     """
-    def __init__(self, func, initial_params, func_jacobian=None, method='leastsq', **kwargs):
+    def __init__(self, func, initial_params, func_jacobian=None, **kwargs):
         ScatterFit.__init__(self)
         self.func = func
         # Preserve this for repeatability of fits
-        self.initial_params = initial_params
+        self.initial_params = np.asarray(initial_params)
         self.func_jacobian = func_jacobian
-        try:
-            self._optimizer = scipy.optimize.__dict__[method]
-        except KeyError:
-            raise ValueError('Optimisation method "' + method + '" unknown - should be one of: ' +
-                             'anneal fmin fmin_bfgs fmin_cg fmin_l_bfgs_b fmin_powell fmin_tnc leastsq')
         # Extra keyword arguments to optimiser
         self._extra_args = kwargs
-        if not method in ('fmin_l_bfgs_b', 'fmin_tnc'):
-            self._extra_args['full_output'] = 1
-        self.params = initial_params
+        self.params = self.initial_params
+        self.cov_params = None
 
-    def fit(self, x, y):
-        """Fit function to data, by performing non-linear least squares optimisation.
+    def fit(self, x, y, std_y=1.0):
+        """Fit function to data, using non-linear least-squares optimisation.
 
         This determines the optimal parameter vector ``p*`` so that the function
         ``y = f(p, x)`` best fits the observed x-y data, in a least-squares
@@ -1499,19 +1498,19 @@ class NonLinearLeastSquaresFit(ScatterFit):
             Sequence of input values as columns of a numpy array
         y : array-like, shape (D_y, N)
             Sequence of output values as columns of a numpy array
+        std_y : float or array-like, shape (D_y, N), optional
+            Measurement error or uncertainty of `y` values, expressed as standard
+            deviation in units of `y`
 
         """
         x = np.asarray(x)
         y = np.asarray(y)
-        # Sum-of-squares cost function to be minimised (or R = prod(D_y) * N residuals for leastsq)
-        def cost(p):
-            residuals = y - self.func(p, x)
-            if self._optimizer.__name__ == 'leastsq':
-                return residuals.ravel()
-            else:
-                return (residuals**2).sum()
+        # Calculate R = prod(D_y) * N weighted residuals (leastsq will minimise sum(residuals ** 2))
+        def residuals(p):
+            r = (y - self.func(p, x)) / std_y
+            return r.ravel()
         # Register Jacobian function if applicable
-        if not self.func_jacobian is None:
+        if self.func_jacobian is not None:
             # Jacobian (R, P) matrix of function at given p and x values (derivatives along rows)
             def jacobian(p):
                 # Produce Jacobian of residual - array with shape (D_y, P, N)
@@ -1519,19 +1518,13 @@ class NonLinearLeastSquaresFit(ScatterFit):
                 # Squash every axis except second-last parameter axis together, to get (R, P) shape
                 flatten_axes = range(len(residual_jac.shape) - 2) + [len(residual_jac.shape) - 1]
                 ravel_jac = squash(residual_jac, flatten_axes, move_to_start=True)
-                if self._optimizer.__name__ == 'leastsq':
-                    # Jacobian of residuals has shape (R, P)
-                    return ravel_jac
-                else:
-                    # Jacobian of cost function (sum of squared residuals) has shape (P,) instead
-                    residuals = y - self.func(p, x)
-                    return np.dot(ravel_jac.transpose(), 2.0 * residuals.ravel())
-            if self._optimizer.__name__ == 'leastsq':
-                self._extra_args['Dfun'] = jacobian
-            else:
-                self._extra_args['fprime'] = jacobian
-        # Do optimisation (copy initial parameters, as the optimiser clobbers them with final values)
-        self.params = self._optimizer(cost, copy.deepcopy(self.initial_params), **self._extra_args)[0]
+                # Jacobian of residuals has shape (R, P)
+                return ravel_jac
+            self._extra_args['Dfun'] = jacobian
+        # Optimise, starting from copy of same initial parameter vector for each call of fit (x0 used to be clobbered)
+        results = scipy.optimize.leastsq(residuals, self.initial_params[:], full_output=1, **self._extra_args)
+        self.params = results[0]
+        self.cov_params = results[1]
 
     def __call__(self, x):
         """Evaluate fitted function on new data.
@@ -1553,8 +1546,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
     def __copy__(self):
         """Shallow copy operation."""
-        return NonLinearLeastSquaresFit(self.func, self.params, self.func_jacobian,
-                                        self._optimizer.__name__, **self._extra_args)
+        return NonLinearLeastSquaresFit(self.func, self.params, self.func_jacobian, **self._extra_args)
 
     def __deepcopy__(self, memo):
         """Deep copy operation.
@@ -1569,7 +1561,6 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
         """
         return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo), self.func_jacobian,
-                                        copy.deepcopy(self._optimizer.__name__, memo),
                                         **(copy.deepcopy(self._extra_args, memo)))
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -1595,8 +1586,8 @@ class GaussianFit(ScatterFit):
     height : float
         Initial guess of height of Gaussian curve
 
-    Arguments
-    ---------
+    Attributes
+    ----------
     mean : array, shape (D,)
         D-dimensional mean vector, either initial guess or final optimal value
     var : array, shape (D,), or float
@@ -1660,7 +1651,7 @@ class GaussianFit(ScatterFit):
                 ivar = p[D + 1:]
             return p[D] * np.exp(-0.5 * np.dot(ivar, x_min_mu * x_min_mu))
         # Internal non-linear least squares fitter
-        self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params, method='leastsq')
+        self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params)
 
     def fit(self, x, y):
         """Fit a Gaussian curve to data.

@@ -158,6 +158,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         self.y = np.polyval(self.poly, self.x)
 
     def test_fit_eval(self):
+        """Basic function fitting and evaluation using data from a known function."""
         # Ignore test if SciPy version is below 0.7.0
         try:
             scipy.interpolate.PiecewisePolynomial
@@ -175,6 +176,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         np.testing.assert_equal(y, np.tile(self.y[0], self.x.shape))
 
     def test_stepwise_interp(self):
+        """Test underlying zeroth-order interpolator."""
         x = np.sort(np.random.rand(100)) * 4. - 2.5
         y = np.random.randn(100)
         interp = fitting.PiecewisePolynomial1DFit(max_degree=0)
@@ -186,6 +188,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(interp(self.x), fitting._stepwise_interp(x, y, self.x), decimal=10)
 
     def test_linear_interp(self):
+        """Test underlying first-order interpolator."""
         x = np.sort(np.random.rand(100)) * 4. - 2.5
         y = np.random.randn(100)
         interp = fitting.PiecewisePolynomial1DFit(max_degree=1)
@@ -203,6 +206,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         self.y = 1.0 / np.polyval(self.poly, self.x)
 
     def test_fit_eval(self):
+        """Basic function fitting and evaluation using data from a known function."""
         interp = fitting.ReciprocalFit(fitting.Polynomial1DFit(2))
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -213,6 +217,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
 
 class Independent1DFitTestCases(unittest.TestCase):
     """Check the Independent1DFit class."""
+
     def setUp(self):
         self.poly1 = np.array([1.0, -2.0, 20.0])
         self.poly2 = np.array([1.0, 2.0, 10.0])
@@ -229,6 +234,7 @@ class Independent1DFitTestCases(unittest.TestCase):
         self.y[1, :, 2] = np.polyval(self.poly2, self.x)
 
     def test_fit_eval(self):
+        """Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Independent1DFit(fitting.Polynomial1DFit(2), self.axis)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.x, self.y_too_low_dim)
@@ -259,6 +265,7 @@ class Delaunay2DScatterFitTestCases(unittest.TestCase):
         self.outsidey = np.array([self.default_val])
 
     def test_fit_eval_nn(self):
+        """Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Delaunay2DScatterFit(default_val=self.default_val)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -289,6 +296,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
         self.outsidey = np.tile(self.default_val, (len(self.outsidex[0]), len(self.outsidex[1])))
 
     def test_fit_eval_nn(self):
+        """Basic function fitting and evaluation using data from a known function, using 'nn' gridder."""
         interp = fitting.Delaunay2DGridFit('nn', default_val=self.default_val)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -301,6 +309,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
     def test_fit_eval_linear(self):
+        """Basic function fitting and evaluation using data from a known function, using 'linear' gridder."""
         interp = fitting.Delaunay2DGridFit('linear', default_val=self.default_val)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -332,22 +341,44 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
         self.init_params2 = np.array([0, 0, 1, 1, 0])
         self.x2 = np.random.randn(2, 80)
         self.y2 = lngauss_diagcov(self.true_params2, self.x2)
+        # Linear function
+        self.func3 = lambda p, x: np.dot(p, x)
+        self.jac3 = lambda p, x: x
+        self.true_params3 = np.array([-0.1, 0.2, -0.3, 0.0, 0.5])
+        self.init_params3 = np.zeros(5)
+        t = np.arange(0, 10., 10. / 100)
+        self.x3 = np.vander(t, 5).T
+        self.y3 = self.func3(self.true_params3, self.x3)
 
     def test_fit_eval_func1(self):
-        self.assertRaises(ValueError, fitting.NonLinearLeastSquaresFit, \
-                          self.vFunc, self.init_params, method='bollie')
-        interp = fitting.NonLinearLeastSquaresFit(self.vFunc, self.init_params, method='fmin_bfgs', disp=0)
+        """Basic function fitting and evaluation using data from a known function."""
+        interp = fitting.NonLinearLeastSquaresFit(self.vFunc, self.init_params)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.params, self.true_params, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=5)
 
     def test_fit_eval_gauss(self):
-        interp2 = fitting.NonLinearLeastSquaresFit(self.func2, self.init_params2, method='leastsq')
+        """Check fit on a 2-D log Gaussian function."""
+        interp2 = fitting.NonLinearLeastSquaresFit(self.func2, self.init_params2)
         interp2.fit(self.x2, self.y2)
         y2 = interp2(self.x2)
         np.testing.assert_almost_equal(interp2.params, self.true_params2, decimal=10)
         np.testing.assert_almost_equal(y2, self.y2, decimal=10)
+
+    def test_fit_eval_linear(self):
+        """Compare to LinearLeastSquaresFit on a linear problem (and check use of Jacobian)."""
+        lin = fitting.LinearLeastSquaresFit()
+        lin.fit(self.x3, self.y3, std_y=1.0)
+        nonlin = fitting.NonLinearLeastSquaresFit(self.func3, self.init_params3, self.jac3)
+        nonlin.fit(self.x3, self.y3, std_y=1.0)
+        # A correct Jacobian helps a lot...
+        np.testing.assert_almost_equal(nonlin.params, self.true_params3, decimal=12)
+        np.testing.assert_almost_equal(nonlin.cov_params, lin.cov_params, decimal=12)
+        nonlin_nojac = fitting.NonLinearLeastSquaresFit(self.func3, self.init_params3)
+        nonlin_nojac.fit(self.x3, self.y3, std_y=1.0)
+        np.testing.assert_almost_equal(nonlin_nojac.params, self.true_params3, decimal=6)
+        # Covariance matrix is way smaller than linear one...
 
 class GaussianFit2VarTestCases(unittest.TestCase):
     """Check the GaussianFit class with different variances on each dimension."""
