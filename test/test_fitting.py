@@ -6,14 +6,14 @@ import numpy as np
 import scipy.interpolate
 from scape import fitting
 
-class UtilityFunctionTestCases(unittest.TestCase):
+class UtilityFunctionsTestCases(unittest.TestCase):
     """Exercise utility functions."""
 
     def setUp(self):
         self.x = np.random.rand(2, 4, 10)
 
     def test_squash(self):
-        """Test squash and unsquash."""
+        """UtilityFunctions: Test squash and unsquash."""
         y1 = fitting.squash(self.x, [], True)
         y1a = fitting.squash(self.x, None, True)
         y2 = fitting.squash(self.x, (1), False)
@@ -46,7 +46,7 @@ class LinearLeastSquaresFitTestCases(unittest.TestCase):
         self.poly_y = np.dot(self.params, self.poly_x)
 
     def test_fit_eval(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """LinearLeastSquaresFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.LinearLeastSquaresFit()
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -55,7 +55,7 @@ class LinearLeastSquaresFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
     def test_cov_params(self):
-        """Obtain sample statistics of parameters and compare to calculated covariance matrix."""
+        """LinearLeastSquaresFit: Obtain sample statistics of parameters and compare to calculated covariance matrix."""
         interp = fitting.LinearLeastSquaresFit()
         std_y = 1.0
         M = 200
@@ -74,7 +74,7 @@ class LinearLeastSquaresFitTestCases(unittest.TestCase):
                         "Sample parameter covariance matrix differs too much from expected one")
 
     def test_vs_numpy(self):
-        """Compare least-squares fitter to np.linalg.lstsq."""
+        """LinearLeastSquaresFit: Compare fitter to np.linalg.lstsq."""
         interp = fitting.LinearLeastSquaresFit()
         interp.fit(self.x, self.y)
         params = np.linalg.lstsq(self.x.T, self.y)[0]
@@ -96,7 +96,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         self.randp = np.random.randn(4)
 
     def test_fit_eval(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """Polynomial1DFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Polynomial1DFit(2)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -106,7 +106,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=10)
 
     def test_vs_numpy(self):
-        """Compare polynomial fitter to np.polyfit and np.polyval."""
+        """Polynomial1DFit: Compare fitter to np.polyfit and np.polyval."""
         x, p = self.randx - np.mean(self.randx), self.randp
         y = p[0] * (x ** 3) + p[1] * (x ** 2) + p[2] * x + p[3]
         interp = fitting.Polynomial1DFit(3)
@@ -120,7 +120,7 @@ class Polynomial1DFitTestCases(unittest.TestCase):
 
     # pylint: disable-msg=R0201
     def test_reduce_degree(self):
-        """Check that polynomial degree is reduced with too few data points."""
+        """Polynomial1DFit: Check that polynomial degree is reduced with too few data points."""
         interp = fitting.Polynomial1DFit(2)
         interp.fit([1.0], [1.0])
         np.testing.assert_almost_equal(interp.poly, [1.0], decimal=10)
@@ -139,7 +139,7 @@ class Polynomial2DFitTestCases(unittest.TestCase):
         self.y = np.dot(self.poly, A)
 
     def test_fit_eval(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """Polynomial2DFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Polynomial2DFit(self.degrees)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -158,7 +158,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         self.y = np.polyval(self.poly, self.x)
 
     def test_fit_eval(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """PiecewisePolynomial1DFit: Basic function fitting and evaluation using data from a known function."""
         # Ignore test if SciPy version is below 0.7.0
         try:
             scipy.interpolate.PiecewisePolynomial
@@ -176,7 +176,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         np.testing.assert_equal(y, np.tile(self.y[0], self.x.shape))
 
     def test_stepwise_interp(self):
-        """Test underlying zeroth-order interpolator."""
+        """PiecewisePolynomial1DFit: Test underlying zeroth-order interpolator."""
         x = np.sort(np.random.rand(100)) * 4. - 2.5
         y = np.random.randn(100)
         interp = fitting.PiecewisePolynomial1DFit(max_degree=0)
@@ -188,7 +188,7 @@ class PiecewisePolynomial1DFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(interp(self.x), fitting._stepwise_interp(x, y, self.x), decimal=10)
 
     def test_linear_interp(self):
-        """Test underlying first-order interpolator."""
+        """PiecewisePolynomial1DFit: Test underlying first-order interpolator."""
         x = np.sort(np.random.rand(100)) * 4. - 2.5
         y = np.random.randn(100)
         interp = fitting.PiecewisePolynomial1DFit(max_degree=1)
@@ -206,7 +206,7 @@ class ReciprocalFitTestCases(unittest.TestCase):
         self.y = 1.0 / np.polyval(self.poly, self.x)
 
     def test_fit_eval(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """ReciprocalFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.ReciprocalFit(fitting.Polynomial1DFit(2))
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -234,7 +234,7 @@ class Independent1DFitTestCases(unittest.TestCase):
         self.y[1, :, 2] = np.polyval(self.poly2, self.x)
 
     def test_fit_eval(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """Independent1DFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Independent1DFit(fitting.Polynomial1DFit(2), self.axis)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.x, self.y_too_low_dim)
@@ -265,7 +265,7 @@ class Delaunay2DScatterFitTestCases(unittest.TestCase):
         self.outsidey = np.array([self.default_val])
 
     def test_fit_eval_nn(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """Delaunay2DScatterFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Delaunay2DScatterFit(default_val=self.default_val)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -296,7 +296,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
         self.outsidey = np.tile(self.default_val, (len(self.outsidex[0]), len(self.outsidex[1])))
 
     def test_fit_eval_nn(self):
-        """Basic function fitting and evaluation using data from a known function, using 'nn' gridder."""
+        """Delaunay2DGridFit: Basic function fitting and evaluation using data from a known function, using 'nn' gridder."""
         interp = fitting.Delaunay2DGridFit('nn', default_val=self.default_val)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -309,7 +309,7 @@ class Delaunay2DGridFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
     def test_fit_eval_linear(self):
-        """Basic function fitting and evaluation using data from a known function, using 'linear' gridder."""
+        """Delaunay2DGridFit: Basic function fitting and evaluation using data from a known function, using 'linear' gridder."""
         interp = fitting.Delaunay2DGridFit('linear', default_val=self.default_val)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -351,7 +351,7 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
         self.y3 = self.func3(self.true_params3, self.x3)
 
     def test_fit_eval_func1(self):
-        """Basic function fitting and evaluation using data from a known function."""
+        """NonLinearLeastSquaresFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.NonLinearLeastSquaresFit(self.vFunc, self.init_params)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -359,7 +359,7 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y, self.y, decimal=5)
 
     def test_fit_eval_gauss(self):
-        """Check fit on a 2-D log Gaussian function."""
+        """NonLinearLeastSquaresFit: Check fit on a 2-D log Gaussian function."""
         interp2 = fitting.NonLinearLeastSquaresFit(self.func2, self.init_params2)
         interp2.fit(self.x2, self.y2)
         y2 = interp2(self.x2)
@@ -367,16 +367,16 @@ class NonLinearLeastSquaresFitTestCases(unittest.TestCase):
         np.testing.assert_almost_equal(y2, self.y2, decimal=10)
 
     def test_fit_eval_linear(self):
-        """Compare to LinearLeastSquaresFit on a linear problem (and check use of Jacobian)."""
+        """NonLinearLeastSquaresFit: Compare to LinearLeastSquaresFit on a linear problem (and check use of Jacobian)."""
         lin = fitting.LinearLeastSquaresFit()
-        lin.fit(self.x3, self.y3, std_y=1.0)
+        lin.fit(self.x3, self.y3, std_y=2.0)
         nonlin = fitting.NonLinearLeastSquaresFit(self.func3, self.init_params3, self.jac3)
-        nonlin.fit(self.x3, self.y3, std_y=1.0)
+        nonlin.fit(self.x3, self.y3, std_y=2.0)
         # A correct Jacobian helps a lot...
-        np.testing.assert_almost_equal(nonlin.params, self.true_params3, decimal=12)
-        np.testing.assert_almost_equal(nonlin.cov_params, lin.cov_params, decimal=12)
+        np.testing.assert_almost_equal(nonlin.params, self.true_params3, decimal=11)
+        np.testing.assert_almost_equal(nonlin.cov_params, lin.cov_params, decimal=11)
         nonlin_nojac = fitting.NonLinearLeastSquaresFit(self.func3, self.init_params3)
-        nonlin_nojac.fit(self.x3, self.y3, std_y=1.0)
+        nonlin_nojac.fit(self.x3, self.y3, std_y=0.1)
         np.testing.assert_almost_equal(nonlin_nojac.params, self.true_params3, decimal=6)
         # Covariance matrix is way smaller than linear one...
 
@@ -387,37 +387,60 @@ class GaussianFit2VarTestCases(unittest.TestCase):
         # For a more challenging fit, move the true mean away from the origin, i.e. away from the region
         # being randomly sampled in self.x. Fitting a Gaussian to a segment that does not contain a clear peak
         # works fine if the fit is done to the log of the data, but fails in the linear domain.
-        self.true_mean, self.true_var, self.true_height = [0, 0], [10, 20], 4
-        true_gauss = fitting.GaussianFit(self.true_mean, self.true_var, self.true_height)
-        self.x = 7 * np.random.randn(2, 80)
+        self.true_mean, self.true_std, self.true_height = [0., 0.], [3., 5.], 4.
+        true_gauss = fitting.GaussianFit(self.true_mean, self.true_std, self.true_height)
+        self.x = 7. * np.random.randn(2, 300)
         self.y = true_gauss(self.x)
-        self.init_mean, self.init_var, self.init_height = [3, -2], [1, 1], 1
+        self.init_mean, self.init_std, self.init_height = [3., -2.], [1., 1.], 1.
 
     def test_fit_eval_diagcov(self):
-        interp = fitting.GaussianFit(self.init_mean, self.init_var, self.init_height)
+        """GaussianFit (independent stdevs): Basic function fitting and evaluation using data from a known function."""
+        interp = fitting.GaussianFit(self.init_mean, self.init_std, self.init_height)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.mean, self.true_mean, decimal=7)
-        np.testing.assert_almost_equal(interp.var, self.true_var, decimal=6)
+        np.testing.assert_almost_equal(interp.std, self.true_std, decimal=7)
         np.testing.assert_almost_equal(interp.height, self.true_height, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
+
+    def test_cov_params(self):
+        """GaussianFit (independent stdevs): Obtain sample statistics of parameters and compare to calculated covariance matrix."""
+        interp = fitting.GaussianFit(self.init_mean, self.init_std, self.init_height)
+        true_params = np.r_[self.true_mean, self.true_height, self.true_std]
+        std_y = 0.1
+        M = 200
+        param_set = np.zeros((len(true_params), M))
+        for n in range(M):
+            interp.fit(self.x, self.y + std_y * np.random.randn(len(self.y)), std_y)
+            param_set[:, n] = np.r_[interp.mean, interp.height, interp.std]
+        mean_params = param_set.mean(axis=1)
+        norm_params = param_set - mean_params[:, np.newaxis]
+        cov_params = np.dot(norm_params, norm_params.T) / M
+        estm_std_params = np.sqrt(np.diag(cov_params))
+        std_params = np.r_[interp.std_mean, interp.std_height, interp.std_std]
+        self.assertTrue((np.abs(mean_params - true_params) / std_params < 0.2).all(),
+                        "Sample mean parameter vector differs too much from true value")
+        # Only check diagonal of cov matrix - the rest is probably affected by linearisation
+        self.assertTrue((np.abs(estm_std_params - std_params) / std_params < 0.2).all(),
+                        "Sample parameter standard deviation differs too much from expected one")
 
 class GaussianFit1VarTestCases(unittest.TestCase):
     """Check the GaussianFit class with a single variance on all dimensions."""
 
     def setUp(self):
-        self.true_mean, self.true_var, self.true_height = [0, 0], 10, 4
-        true_gauss = fitting.GaussianFit(self.true_mean, self.true_var, self.true_height)
+        self.true_mean, self.true_std, self.true_height = [0, 0], np.sqrt(10), 4
+        true_gauss = fitting.GaussianFit(self.true_mean, self.true_std, self.true_height)
         self.x = 7 * np.random.randn(2, 80)
         self.y = true_gauss(self.x)
-        self.init_mean, self.init_var, self.init_height = [3, -2], 1, 1
+        self.init_mean, self.init_std, self.init_height = [3, -2], 1, 1
 
     def test_fit_eval_diagcov(self):
-        interp = fitting.GaussianFit(self.init_mean, self.init_var, self.init_height)
+        """GaussianFit (shared stdev): Basic function fitting and evaluation using data from a known function."""
+        interp = fitting.GaussianFit(self.init_mean, self.init_std, self.init_height)
         interp.fit(self.x, self.y)
         y = interp(self.x)
         np.testing.assert_almost_equal(interp.mean, self.true_mean, decimal=7)
-        np.testing.assert_almost_equal(interp.var, self.true_var, decimal=6)
+        np.testing.assert_almost_equal(interp.std, self.true_std, decimal=7)
         np.testing.assert_almost_equal(interp.height, self.true_height, decimal=7)
         np.testing.assert_almost_equal(y, self.y, decimal=7)
 
@@ -434,6 +457,7 @@ class Spline1DFitTestCases(unittest.TestCase):
         self.testy = np.polyval(self.poly, self.testx)
 
     def test_fit_eval(self):
+        """Spline1DFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Spline1DFit(3)
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -455,6 +479,7 @@ class Spline2DScatterFitTestCases(unittest.TestCase):
         self.testy = poly[0]*self.testx[0]**2 + poly[1]*self.testx[0]*self.testx[1] + poly[2]*self.testx[1]**2
 
     def test_fit_eval(self):
+        """Spline2DScatterFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Spline2DScatterFit((3, 3))
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -479,6 +504,7 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
 
     def test_fit_eval(self):
+        """Spline2DGridFit: Basic function fitting and evaluation using data from a known function."""
         interp = fitting.Spline2DGridFit((3, 3))
         self.assertRaises(fitting.NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
@@ -499,6 +525,7 @@ class RbfScatterFitTestCases(unittest.TestCase):
         self.testy = np.array([1, 1, 1, 1])
 
     def test_fit_eval(self):
+        """RbfScatterFit: Basic function fitting and evaluation using data from a known function."""
         try:
             interp = fitting.RbfScatterFit()
         except ImportError:
@@ -522,6 +549,7 @@ class RandomisedFitTestCases(unittest.TestCase):
         self.yNoisy = self.y + 0.001 * np.random.randn(self.num_runs, len(self.y))
 
     def test_randomised_polyfit(self):
+        """RandomisedFit: Randomise the fit of a polynomial fitter."""
         interp = fitting.Polynomial1DFit(2)
         # Perfect fit (no noise)
         interp.fit(self.x, self.y)
