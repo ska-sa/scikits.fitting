@@ -352,6 +352,107 @@ def randomise(interp, x, y, method='shuffle'):
     random_interp.fit(x, fitted_y + residuals)
     return random_interp
 
+def pascal(n):
+    """Create n-by-n upper triangular Pascal matrix.
+
+    This square matrix contains Pascal's triangle as its upper triangle. For
+    example, for n=5 the output will be::
+
+      1 1 1 1 1
+      0 1 2 3 4
+      0 0 1 3 6
+      0 0 0 1 4
+      0 0 0 0 1
+
+    Parameters
+    ----------
+    n : integer
+        Positive integer indicating size of desired matrix
+
+    Returns
+    -------
+    u : array of float, shape (n, n)
+        Upper triangular Pascal matrix
+
+    Notes
+    -----
+    For more details on the Pascal matrix, see the Wikipedia entry [1]_. The
+    matrix is calculated using matrix exponentiation of a superdiagonal matrix.
+    Although it theoretically consists of integers only, the matrix entries
+    grow factorially with *n* and typically overflow the integer representation
+    for n > 100. A less exact floating-point representation is therefore used
+    instead (similar to setting exact=0 in :func:`scipy.factorial`).
+
+    .. [1] http://en.wikipedia.org/wiki/Pascal_matrix
+
+    Examples
+    --------
+    >>> pascal(4)
+    array([[ 1.,  1.,  1.,  1.],
+           [ 0.,  1.,  2.,  3.],
+           [ 0.,  0.,  1.,  3.],
+           [ 0.,  0.,  0.,  1.]])
+
+    """
+    # Create special superdiagonal matrix X
+    x = np.diag(np.arange(1., n), 1)
+    # Evaluate matrix exponential Un = exp(X) via direct series expansion, since X is nilpotent
+    # That is, Un = I + X + X^2 / 2! + X^3 / 3! + ... + X^(n-1) / (n-1)!
+    term = x[:]
+    # The first two terms [I + X] are trivial
+    u = np.eye(n) + term
+    # Accumulate the series terms
+    for k in range(2, n - 1):
+        term = np.dot(term, x) / k
+        u += term
+    # The last term [X^(n-1) / (n-1)!] is also trivial - a zero matrix with a single one in the top right corner
+    u[0, -1] = 1.
+    return u
+
+def offset_scale_mat(n, offset=0., scale=1.):
+    """Matrix that transforms polynomial coefficients to account for offset/scale.
+
+    This matrix can be used to transform a vector of polynomial coefficients
+    that operate on scaled and shifted data to a vector of coefficients that
+    perform the same action on the unscaled and unshifted data. The offset and
+    scale factor is thereby incorporated into the polynomial coefficients.
+
+    Given two *n*-dimensional vectors of coefficients (highest order first),
+    :math:`p` and :math:`q`, related by
+
+    .. math:: \sum_{i=0}^{n-1} p_i \left(\frac{x - m}{s}\right)^{n-1-i} = \sum_{k=0}^{n-1} q_k x^{n-1-k},
+ 
+    with offset :math:`m` and scale :math:`s`, this calculates the matrix
+    :math:`M` so that :math:`q = M p`.
+
+    Parameters
+    ----------
+    n : integer
+        Number of polynomial coefficients, equal to (degree + 1)
+    offset : float, optional
+        Offset that is subtracted from data
+    scale : float, optional
+        Data is divided by this scale
+
+    Returns
+    -------
+    M : array of float, shape (n, n)
+        Resulting transformation matrix
+
+    Examples
+    --------
+    >>> offset_scale_mat(4, 3, 2)
+    array([[ 0.125,  0.   ,  0.   ,  0.   ],
+           [-1.125,  0.25 ,  0.   ,  0.   ],
+           [ 3.375, -1.5  ,  0.5  ,  0.   ],
+           [-3.375,  2.25 , -1.5  ,  1.   ]])
+
+    """
+    poly_offset = np.fliplr(np.vander([-offset], n))
+    offset_mat = scipy.linalg.toeplitz(poly_offset, np.r_[1., np.zeros(n-1)])
+    poly_scale = np.vander([scale], n)
+    return np.fliplr(np.flipud(pascal(n))) * offset_mat / poly_scale
+
 #----------------------------------------------------------------------------------------------------------------------
 #--- INTERFACE :  ScatterFit
 #----------------------------------------------------------------------------------------------------------------------
@@ -617,8 +718,6 @@ class Polynomial1DFit(ScatterFit):
         Polynomial coefficients (highest order first), only set after :func:`fit`
     cov_poly : array of float, shape (P, P)
         Covariance matrix of coefficients, only set after :func:`fit`
-    x_mean : float
-        Mean `x` value used to centre the data, only set after :func:`fit`
 
     """
     def __init__(self, max_degree, rcond=None):
@@ -628,7 +727,7 @@ class Polynomial1DFit(ScatterFit):
         # The following attributes are only set after :func:`fit`
         self.poly = None
         self.cov_poly = None
-        self.x_mean = None
+        self._mean = None
 
     def _regressor(self, x):
         """Form normalised regressor / design matrix from input vector.
@@ -646,7 +745,7 @@ class Polynomial1DFit(ScatterFit):
             Regressor / design matrix to be used in least-squares fit
 
         """
-        return np.vander(x - self.x_mean, len(self.poly)).T
+        return np.vander(x - self._mean, len(self.poly)).T
 
     def fit(self, x, y, std_y=1.0):
         """Fit polynomial to data.
@@ -666,15 +765,17 @@ class Polynomial1DFit(ScatterFit):
         x = np.atleast_1d(np.asarray(x, dtype='double'))
         y = np.atleast_1d(np.asarray(y, dtype='double'))
         # Polynomial fits perform better if input data is centred around origin [see numpy.polyfit help]
-        self.x_mean = x.mean()
+        self._mean = x.mean()
         # Reduce polynomial degree if there are not enough points to fit (degree should be < len(x))
         degree = min(self.max_degree, len(x) - 1)
         # Initialise parameter vector, as its length is used to create design matrix of right shape in _regressor
         self.poly = np.zeros(degree + 1)
         # Solve least-squares regression problem
         self._lstsq.fit(self._regressor(x), y, std_y)
-        self.poly = self._lstsq.params
-        self.cov_poly = self._lstsq.cov_params
+        # Convert polynomial (and cov matrix) so that it applies to original unnormalised data
+        tfm = offset_scale_mat(len(self.poly), self._mean)
+        self.poly = np.dot(tfm, self._lstsq.params)
+        self.cov_poly = np.dot(tfm, np.dot(self._lstsq.cov_params, tfm.T))
 
     def __call__(self, x, full_output=False):
         """Evaluate polynomial on new data.
@@ -695,7 +796,7 @@ class Polynomial1DFit(ScatterFit):
 
         """
         x = np.atleast_1d(np.asarray(x))
-        if (self.poly is None) or (self.x_mean is None):
+        if (self.poly is None) or (self._mean is None):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
         return self._lstsq(self._regressor(x), full_output)
 
@@ -725,10 +826,6 @@ class Polynomial2DFit(ScatterFit):
         Polynomial coefficients (highest order first), only set after :func:`fit`
     cov_poly : array of float, shape (P, P)
         Covariance matrix of coefficients, only set after :func:`fit`
-    x_mean : array of 2 floats
-        Mean `x` value used to centre the data, only set after :func:`fit`
-    x_scale : array of 2 floats
-        Max `x` deviation used to scale the data, only set after :func:`fit`
 
     """
     def __init__(self, degrees, rcond=None):
@@ -739,8 +836,8 @@ class Polynomial2DFit(ScatterFit):
         # The following attributes are only set after :func:`fit`
         self.poly = None
         self.cov_poly = None
-        self.x_mean = None
-        self.x_scale = None
+        self._mean = None
+        self._scale = None
 
     def _regressor(self, x):
         """Form normalised regressor / design matrix from set of input vectors.
@@ -772,7 +869,7 @@ class Polynomial2DFit(ScatterFit):
         This is closely related to the Vandermonde matrix of *x*.
 
         """
-        x_norm = (x - self.x_mean[:, np.newaxis]) / self.x_scale[:, np.newaxis]
+        x_norm = (x - self._mean[:, np.newaxis]) / self._scale[:, np.newaxis]
         v1 = np.vander(x_norm[0], self.degrees[0] + 1)
         v2 = np.vander(x_norm[1], self.degrees[1] + 1).T
         return np.vstack([v1[:, n][np.newaxis, :] * v2 for n in xrange(v1.shape[1])])
@@ -799,13 +896,17 @@ class Polynomial2DFit(ScatterFit):
         x = np.atleast_2d(np.array(x, dtype='double'))
         y = np.atleast_1d(np.array(y, dtype='double'))
         # Polynomial fits perform better if input data is centred around origin and scaled [see numpy.polyfit help]
-        self.x_mean = x.mean(axis=1)
-        self.x_scale = np.abs(x - self.x_mean[:, np.newaxis]).max(axis=1)
-        self.x_scale[self.x_scale == 0.0] = 1.0
+        self._mean = x.mean(axis=1)
+        self._scale = np.abs(x - self._mean[:, np.newaxis]).max(axis=1)
+        self._scale[self._scale == 0.0] = 1.0
         # Solve least squares regression problem
         self._lstsq.fit(self._regressor(x), y, std_y)
-        self.poly = self._lstsq.params
-        self.cov_poly = self._lstsq.cov_params
+        # Convert polynomial (and cov matrix) so that it applies to original unnormalised data
+        tfm0 = offset_scale_mat(self.degrees[0] + 1, self._mean[0], self._scale[0])
+        tfm1 = offset_scale_mat(self.degrees[1] + 1, self._mean[1], self._scale[1])
+        tfm = np.kron(tfm0, tfm1)
+        self.poly = np.dot(tfm, self._lstsq.params)
+        self.cov_poly = np.dot(tfm, np.dot(self._lstsq.cov_params, tfm.T))
 
     def __call__(self, x, full_output=False):
         """Evaluate polynomial on new data.
@@ -826,7 +927,7 @@ class Polynomial2DFit(ScatterFit):
 
         """
         x = np.atleast_2d(np.asarray(x))
-        if (self.poly is None) or (self.x_mean is None):
+        if (self.poly is None) or (self._mean is None) or (self._scale is None):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
         return self._lstsq(self._regressor(x), full_output)
 
