@@ -1604,8 +1604,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
             deviation in units of `y`
 
         """
-        x = np.asarray(x)
-        y = np.asarray(y)
+        x, y = np.asarray(x), np.asarray(y)
         # Calculate R = prod(D_y) * N weighted residuals (leastsq will minimise sum(residuals ** 2))
         def residuals(p):
             r = (y - self.func(p, x)) / std_y
@@ -1626,6 +1625,24 @@ class NonLinearLeastSquaresFit(ScatterFit):
         results = scipy.optimize.leastsq(residuals, self.initial_params[:], full_output=1, **self._extra_args)
         self.params = results[0]
         self.cov_params = results[1]
+        # Try to salvage a singular precision matrix by using the pseudo-inverse in this case
+        if self.cov_params is None:
+            # The calculation of cov_mat is lifted from scipy.optimize.leastsq
+            ipvt, fjac = results[2]['ipvt'], results[2]['fjac']
+            perm = np.take(np.eye(len(ipvt)), ipvt - 1, 0)
+            R = np.dot(np.triu(fjac.T[:len(ipvt), :]), perm)
+            precision_mat, rcond = np.dot(R.T, R), 1e-15
+            try:
+                cov_mat = np.linalg.pinv(precision_mat, rcond)
+            except LinAlgError:
+                # The standard SVD in NumPy is based on Lapack DGESDD, which is fast but occasionally struggles on
+                # pathological matrices, resulting in a LinAlgError (see NumPy ticket #990) - then all bets are off
+                cov_mat = np.zeros(precision_mat.shape)
+            max_var = np.diag(cov_mat).max()
+            bad_variances = np.diag(cov_mat) <= rcond * max_var
+            bad_var = max_var / rcond if max_var > 0 else 1e100
+            cov_mat[bad_variances, bad_variances] = bad_var
+            self.cov_params = cov_mat
 
     def __call__(self, x):
         """Evaluate fitted function on new data.
