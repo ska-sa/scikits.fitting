@@ -1864,25 +1864,18 @@ class Spline1DFit(ScatterFit):
     ----------
     degree : int, optional
         Degree of spline, in range 1-5 [default=3, i.e. cubic B-spline]
-    std_y : function, signature ``s = f(x, y)``, optional
-        Function evaluating the standard deviation of *y*. This is evaluated
-        during fit() with the (x, y) data to fit as parameters, and should
-        return an array of shape (N,) representing the standard deviation of
-        each sample in *y*.
     min_size : float, optional
         Size of smallest features to fit in the data, expressed in units of *x*.
         This determines the smoothness of fitted spline. Roughly stated, any
         oscillation in the fitted curve will have a period bigger than *min_size*.
-        Works best if *x* is uniformly spaced. If set, this overrides *std_y*.
+        Works best if *x* is uniformly spaced.
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
 
     """
-    def __init__(self, degree=3, std_y=lambda x, y: np.tile(1.0, len(y)), min_size=0.0, **kwargs):
+    def __init__(self, degree=3, min_size=0.0, **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
-        # Standard deviation of y
-        self._std_y = std_y
         # Size of smallest features to fit
         self._min_size = min_size
         # Extra keyword arguments to spline class
@@ -1890,7 +1883,7 @@ class Spline1DFit(ScatterFit):
         # Interpolator function, only set after :func:`fit`
         self._interp = None
 
-    def fit(self, x, y):
+    def fit(self, x, y, std_y=1.0):
         """Fit spline to 1-D data.
 
         The minimum number of data points is N = degree + 1.
@@ -1901,21 +1894,24 @@ class Spline1DFit(ScatterFit):
             Known input values as a 1-D numpy array or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
+        std_y : float or array-like, shape (N,), optional
+            Measurement error or uncertainty of `y` values, expressed as standard
+            deviation in units of `y` (overrides min_size setting)
 
         """
         # Check dimensions of known data
         x = np.atleast_1d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
         if y.size < self.degree + 1:
-            raise ValueError("Not enough data points for spline fit: requires at least " +
-                             str(self.degree + 1) + ", only got " + str(y.size))
+            raise ValueError("Not enough data points for spline fit: requires at least %d, only got %d" %
+                             (self.degree + 1, y.size))
         # Ensure that x is in strictly ascending order
         if np.any(np.diff(x) < 0):
             sort_ind = x.argsort()
             x = x[sort_ind]
             y = y[sort_ind]
-        # Deduce standard deviation of y, based on specified size of smallest features
-        if self._min_size > 0.0:
+        # Deduce standard deviation of y if not given, based on specified size of smallest features
+        if self._min_size > 0.0 and std_y == 1.0:
             # Number of samples, and sample period (assuming samples are uniformly spaced in x)
             N, xstep = len(x), np.abs(np.mean(np.diff(x)))
             # Convert feature size to digital frequency (based on k / N = Ts / T using FFT notation).
@@ -1927,10 +1923,14 @@ class Spline1DFit(ScatterFit):
             window = np.hamming(N)
             periodo = (np.abs(np.fft.fft((y - y.mean()) * window)) ** 2) / (window ** 2).sum()
             periodo[1:(N // 2)] *= 2.0
-            high_freq_std_y = np.sqrt(np.sum(periodo[min_freq_ind:(N // 2 + 1)]) / N)
-            self._std_y = lambda x, y: np.tile(high_freq_std_y, N)
-        self._interp = scipy.interpolate.UnivariateSpline(x, y, w=1.0 / self._std_y(x, y), k=self.degree,
-                                                          **self._extra_args)
+            std_y = np.sqrt(np.sum(periodo[min_freq_ind:(N // 2 + 1)]) / N)
+        # Convert uncertainty into array of shape (N,)
+        if np.isscalar(std_y):
+            std_y = np.tile(std_y, y.shape)
+        std_y = np.atleast_1d(np.asarray(std_y))
+        # Lower bound on uncertainty is determined by floating-point resolution (no upper bound)
+        np.clip(std_y, max(np.mean(np.abs(y)), 1e-20) * np.finfo(y.dtype).eps, np.inf, out=std_y)
+        self._interp = scipy.interpolate.UnivariateSpline(x, y, w=1. / std_y, k=self.degree, **self._extra_args)
 
     def __call__(self, x):
         """Evaluate spline on new data.
@@ -1967,26 +1967,19 @@ class Spline2DScatterFit(ScatterFit):
     ----------
     degree : sequence of 2 ints, optional
         Degree (1-5) of spline in x and y directions
-    std_y : function, signature ``s = f(x, y)``, optional
-        Function evaluating the standard deviation of *y*. This is evaluated
-        during fit() with the (x, y) data to fit as parameters, and should
-        return an array of shape (N,) representing the standard deviation of
-        each sample in *y*.
     kwargs : dict, optional
         Additional keyword arguments are passed to underlying spline class
 
     """
-    def __init__(self, degree=(3, 3), std_y=lambda x, y: np.tile(1.0, len(y)), **kwargs):
+    def __init__(self, degree=(3, 3), **kwargs):
         ScatterFit.__init__(self)
         self.degree = degree
         # Extra keyword arguments to spline class
         self._extra_args = kwargs
-        # Standard deviation of y
-        self._std_y = std_y
         # Interpolator function, only set after :func:`fit`
         self._interp = None
 
-    def fit(self, x, y):
+    def fit(self, x, y, std_y=1.0):
         """Fit spline to 2-D scattered data in unstructured form.
 
         The minimum number of data points is ``N = (degree[0]+1)*(degree[1]+1)``.
@@ -1999,6 +1992,9 @@ class Spline2DScatterFit(ScatterFit):
             Known input values as a 2-D numpy array, or sequence
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
+        std_y : float or array-like, shape (N,), optional
+            Measurement error or uncertainty of `y` values, expressed as standard
+            deviation in units of `y`
 
         """
         # Check dimensions of known data
@@ -2010,8 +2006,14 @@ class Spline2DScatterFit(ScatterFit):
         if y.size < (self.degree[0] + 1) * (self.degree[1] + 1):
             raise ValueError("Not enough data points for spline fit: requires at least %d, only got %d" %
                              ((self.degree[0] + 1) * (self.degree[1] + 1), y.size))
-        self._interp = scipy.interpolate.SmoothBivariateSpline(x[0], x[1], y, w=1.0 / self._std_y(x, y),
-                                                              kx=self.degree[0], ky=self.degree[1], **self._extra_args)
+        # Convert uncertainty into array of shape (N,)
+        if np.isscalar(std_y):
+            std_y = np.tile(std_y, y.shape)
+        std_y = np.atleast_1d(np.asarray(std_y))
+        # Lower bound on uncertainty is determined by floating-point resolution (no upper bound)
+        np.clip(std_y, max(np.mean(np.abs(y)), 1e-20) * np.finfo(y.dtype).eps, np.inf, out=std_y)
+        self._interp = scipy.interpolate.SmoothBivariateSpline(x[0], x[1], y, w=1. / std_y, kx=self.degree[0],
+                                                               ky=self.degree[1], **self._extra_args)
 
     def __call__(self, x):
         """Evaluate spline on new scattered data.
