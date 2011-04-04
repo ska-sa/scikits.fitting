@@ -2067,7 +2067,7 @@ class Spline2DGridFit(GridFit):
         # Interpolator function, only set after :func:`fit`
         self._interp = None
 
-    def fit(self, x, y):
+    def fit(self, x, y, std_y=None):
         """Fit spline to 2-D data on a rectangular grid.
 
         This fits a scalar function defined on 2-D data to the provided grid.
@@ -2083,6 +2083,22 @@ class Spline2DGridFit(GridFit):
             Known input grid specified by sequence of 2 sequences of axis ticks
         y : array-like, shape (M, N)
             Known output values as a 2-D numpy array
+        std_y : None or float or array-like, shape (M, N), optional
+            Measurement error or uncertainty of `y` values, expressed as standard
+            deviation in units of `y`. If None, uncertainty propagation is
+            disabled (typically to save time as this can be costly to calculate
+            when M*N is large).
+
+        Notes
+        -----
+        This propagates uncertainty through the spline fit based on the main idea
+        of [1]_, as expressed in Eq. (13) in the paper. Take note that this
+        equation contains an error -- the square brackets on the right-hand side
+        should enclose the entire sum over i and not just the summand.
+
+        .. [1] Enting, I. G., Trudinger, C. M., and Etheridge, D. M.,
+           "Propagating data uncertainty through smoothing spline fits," Tellus,
+           vol. 58B, pp. 305-309, 2006.
 
         """
         # Check dimensions of known data
@@ -2099,8 +2115,27 @@ class Spline2DGridFit(GridFit):
         xs, ys, zs = sort_grid(x[0], x[1], y)
         self._interp = scipy.interpolate.RectBivariateSpline(xs, ys, zs, kx=self.degree[0], ky=self.degree[1],
                                                              **self._extra_args)
+        # Disable uncertainty propagation if no std_y is given
+        if std_y is None:
+            self._std_fitted_y = None
+        else:
+            # Uncertainty should have same shape as y (or get tiled to that shape if it is scalar)
+            std_y = np.atleast_2d(np.asarray(std_y))
+            self._std_fitted_y = np.tile(std_y, y.shape) if std_y.shape == (1, 1) else std_y
+            if self._std_fitted_y.shape != y.shape:
+                raise ValueError("Spline interpolator requires uncertainty to be scalar or to have shape "
+                                 "%s (same as data), got %s instead" % (y.shape, self._std_fitted_y.shape))
+            # Create list of interpolators, one per value in y, by setting each y value to 1 in turn (and the rest 0)
+            self._std_interps = []
+            testz = np.zeros(zs.size)
+            for m in xrange(zs.size):
+                testz[:] = 0.0
+                testz[m] = 1.0
+                interp = scipy.interpolate.RectBivariateSpline(xs, ys, testz.reshape(zs.shape), kx=self.degree[0],
+                                                               ky=self.degree[1], **self._extra_args)
+                self._std_interps.append(interp)
 
-    def __call__(self, x):
+    def __call__(self, x, full_output=False):
         """Evaluate spline on a new rectangular grid.
 
         Evaluates the fitted scalar function on 2-D grid provided in *x*. The
@@ -2113,11 +2148,16 @@ class Spline2DGridFit(GridFit):
         ----------
         x : sequence of 2 sequences, of lengths K and L
             2-D input grid specified by sequence of 2 sequences of axis ticks
+        full_output : {False, True}, optional
+            True if output uncertainty should also be returned
 
         Returns
         -------
-        y : array-like, shape (K, L)
+        y : float array, shape (K, L)
             Output of function as a 2-D numpy array
+        std_y : None or float array, shape (K, L), optional
+            Uncertainty of function output, expressed as standard deviation
+            (or None if no 'y' uncertainty was supplied during fitting)
 
         """
         # Check dimensions
@@ -2129,7 +2169,17 @@ class Spline2DGridFit(GridFit):
             raise NotFittedError("Spline not fitted to data yet - first call .fit method")
         # The standard DIERCKX 2-D spline evaluation function (bispev) expects a rectangular grid in ascending order
         # Therefore, sort coordinates, evaluate on the sorted grid, and return the desorted result
-        return desort_grid(x[0], x[1], self._interp(sorted(x[0]), sorted(x[1])))
+        x0s, x1s = sorted(x[0]), sorted(x[1])
+        y = desort_grid(x[0], x[1], self._interp(x0s, x1s))
+        if not full_output:
+            return y
+        if self._std_fitted_y is None:
+            return y, None
+        # The output y variance is a weighted sum of the variances of the fitted y values, according to Enting's method
+        var_ys = np.zeros(y.shape)
+        for std_fitted_y, std_interp in zip(self._std_fitted_y.ravel(), self._std_interps):
+            var_ys += (std_fitted_y * std_interp(x0s, x1s)) ** 2
+        return y, desort_grid(x[0], x[1], np.sqrt(var_ys))
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  RbfScatterFit

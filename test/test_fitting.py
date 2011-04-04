@@ -559,13 +559,15 @@ class Spline2DGridFitTestCases(unittest.TestCase):
     """Check the Spline2DGridFit class."""
 
     def setUp(self):
-        # Training data is randomly sampled parabola (but remember to keep data in ascending order)
+        self.fit_dims = (10, 20)
+        self.eval_dims = (8, 12)
+        # Training data is randomly sampled parabola (also does not have to be in ascending order)
         poly = np.array([1.0, 2.0, 1.0])
-        self.x = [sorted(np.random.randn(10)), sorted(np.random.randn(20))]
+        self.x = [np.random.randn(self.fit_dims[0]), np.random.randn(self.fit_dims[1])]
         xx1, xx0 = np.meshgrid(self.x[1], self.x[0])
         self.y = poly[0]*xx0*xx0 + poly[1]*xx0*xx1 + poly[2]*xx1*xx1
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
-        self.testx = [sorted(0.1*np.random.randn(8)), sorted(0.1*np.random.randn(12))]
+        self.testx = [0.1*np.random.randn(self.eval_dims[0]), 0.1*np.random.randn(self.eval_dims[1])]
         testx1, testx0 = np.meshgrid(self.testx[1], self.testx[0])
         self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
 
@@ -579,6 +581,23 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         testy = interp(self.testx)
         np.testing.assert_almost_equal(y, self.y, decimal=9)
         np.testing.assert_almost_equal(testy, self.testy, decimal=8)
+
+    def test_uncertainty_propagation(self):
+        """Spline2DGridFit: Test uncertainty propagation."""
+        # Calculate output data uncertainty on test data
+        interp = fitting.Spline2DGridFit((3, 3))
+        self.assertRaises(ValueError, interp.fit, self.x, self.y, self.x[0])
+        interp.fit(self.x, self.y, std_y=0.1)
+        testy, std_testy = interp(self.testx, full_output=True)
+        # Estimate data uncertainty using Monte Carlo
+        y_ensemble = []
+        for m in xrange(1000):
+            interp = fitting.Spline2DGridFit((3, 3))
+            interp.fit(self.x, self.y + 0.1*np.random.randn(*self.y.shape))
+            y_ensemble.append(interp(self.testx))
+        std_y_mc = np.dstack(y_ensemble).std(axis=2)
+        # This is only accurate to a few percent, because of the relatively small number of Monte Carlo samples
+        np.testing.assert_almost_equal(std_testy, std_y_mc, decimal=1)
 
 class RbfScatterFitTestCases(unittest.TestCase):
     """Check the RbfScatterFit class (only if Rbf is installed in SciPy)."""
