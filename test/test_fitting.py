@@ -591,7 +591,7 @@ class Spline2DGridFitTestCases(unittest.TestCase):
         testy, std_testy = interp(self.testx, full_output=True)
         # Estimate data uncertainty using Monte Carlo
         y_ensemble = []
-        for m in xrange(1000):
+        for m in xrange(3000):
             interp = fitting.Spline2DGridFit((3, 3))
             interp.fit(self.x, self.y + 0.1*np.random.randn(*self.y.shape))
             y_ensemble.append(interp(self.testx))
