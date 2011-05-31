@@ -215,6 +215,32 @@ def unsquash(x, flatten_axes, original_shape, move_from_start=True):
     else:
         return x.reshape(main_shape + unflatten_shape).transpose(np.array(main_axes + flatten_axes).argsort())
 
+def scalar(x):
+    """Ensure that a variable contains a scalar.
+
+    If `x` is a scalar, it is returned unchanged. If `x` is an array with a
+    single element, that element is extracted. If `x` contains more than one
+    element, an exception is raised.
+
+    Parameters
+    ----------
+    x : object or array of shape () or shape (1, 1, ...)
+        Scalar or array equivalent to a scalar
+
+    Return
+    ------
+    scalar_x : object
+        Original x or single element extracted from array
+
+    Raises
+    ------
+    AssertionError
+        If `x` contains more than one element
+
+    """
+    squeezed_x = np.squeeze(x)
+    assert np.shape(squeezed_x) == (), "Expected array %s to be a scalar" % (x,)
+    return np.atleast_1d(squeezed_x)[0]
 
 def sort_grid(x, y, z):
     """Ensure that the coordinates of a rectangular grid are in ascending order.
