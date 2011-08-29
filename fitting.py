@@ -1579,6 +1579,11 @@ class NonLinearLeastSquaresFit(ScatterFit):
         Generic function to be fit to x-y data (should be vectorised)
     initial_params : array-like, shape (P,)
         Initial guess of function parameter vector *p*
+    enabled_params: sequence of int or sequence of bool, shape (P,), optional
+        Subset of parameters that will be optimised, identified either by their
+        integer indices or by the True values in a boolean mask. The deselected
+        parameters are fixed at their initial values. All parameters are
+        optimised by default.
     func_jacobian : function, signature ``J = g(p, x)``, optional
         Jacobian of function f, if available, where J has the shape (D_y, P),
         with D_y the normal ``y`` shape returned by f (should be vectorised)
@@ -1598,15 +1603,16 @@ class NonLinearLeastSquaresFit(ScatterFit):
     optimal parameter vector using modified Levenberg-Marquardt optimisation.
 
     """
-    def __init__(self, func, initial_params, func_jacobian=None, **kwargs):
+    def __init__(self, func, initial_params, enabled_params=None, func_jacobian=None, **kwargs):
         ScatterFit.__init__(self)
         self.func = func
-        # Preserve this for repeatability of fits
-        self.initial_params = np.asarray(initial_params)
+        # Preserve this for repeatability of fits (also ensure it is floating-point to please residuals() function)
+        self.initial_params = np.asarray(initial_params).astype(np.float)
         self.func_jacobian = func_jacobian
         # Extra keyword arguments to optimiser
         self._extra_args = kwargs
         self.params = self.initial_params
+        self.enabled_params = np.asarray(enabled_params if enabled_params is not None else [True] * len(self.params))
         self.cov_params = None
 
     def fit(self, x, y, std_y=1.0):
@@ -1631,44 +1637,50 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
         """
         x, y = np.asarray(x), np.asarray(y)
+        # Initialise full set of parameters (subset to be optimised will be inserted into this array before use)
+        params = self.initial_params[:]
         # Calculate R = prod(D_y) * N weighted residuals (leastsq will minimise sum(residuals ** 2))
         def residuals(p):
-            r = (y - self.func(p, x)) / std_y
+            params[self.enabled_params] = p
+            r = (y - self.func(params, x)) / std_y
             return r.ravel()
         # Register Jacobian function if applicable
         if self.func_jacobian is not None:
             # Jacobian (R, P) matrix of function at given p and x values (derivatives along rows)
             def jacobian(p):
+                params[self.enabled_params] = p
                 # Produce Jacobian of residual - array with shape (D_y, P, N)
-                residual_jac = - self.func_jacobian(p, x) / std_y
+                residual_jac = - self.func_jacobian(params, x) / std_y
                 # Squash every axis except second-last parameter axis together, to get (R, P) shape
                 flatten_axes = range(len(residual_jac.shape) - 2) + [len(residual_jac.shape) - 1]
                 ravel_jac = squash(residual_jac, flatten_axes, move_to_start=True)
                 # Jacobian of residuals has shape (R, P)
-                return ravel_jac
+                return ravel_jac[:, self.enabled_params]
             self._extra_args['Dfun'] = jacobian
         # Optimise, starting from copy of same initial parameter vector for each call of fit (x0 used to be clobbered)
-        results = scipy.optimize.leastsq(residuals, self.initial_params[:], full_output=1, **self._extra_args)
-        self.params = results[0]
-        self.cov_params = results[1]
+        p, cov_p, infodict, mesg, ier = scipy.optimize.leastsq(residuals, self.initial_params[self.enabled_params],
+                                                               full_output=1, **self._extra_args)
         # Try to salvage a singular precision matrix by using the pseudo-inverse in this case
-        if self.cov_params is None:
-            # The calculation of cov_mat is lifted from scipy.optimize.leastsq
+        if cov_p is None:
+            # The calculation of cov_p is lifted from scipy.optimize.leastsq
             ipvt, fjac = results[2]['ipvt'], results[2]['fjac']
             perm = np.take(np.eye(len(ipvt)), ipvt - 1, 0)
             R = np.dot(np.triu(fjac.T[:len(ipvt), :]), perm)
             precision_mat, rcond = np.dot(R.T, R), 1e-15
             try:
-                cov_mat = np.linalg.pinv(precision_mat, rcond)
+                cov_p = np.linalg.pinv(precision_mat, rcond)
             except LinAlgError:
                 # The standard SVD in NumPy is based on Lapack DGESDD, which is fast but occasionally struggles on
                 # pathological matrices, resulting in a LinAlgError (see NumPy ticket #990) - then all bets are off
-                cov_mat = np.zeros(precision_mat.shape)
-            max_var = np.diag(cov_mat).max()
-            bad_variances = np.diag(cov_mat) <= rcond * max_var
+                cov_p = np.zeros(precision_mat.shape)
+            max_var = np.diag(cov_p).max()
+            bad_variances = np.diag(cov_p) <= rcond * max_var
             bad_var = max_var / rcond if max_var > 0 else 1e100
-            cov_mat[bad_variances, bad_variances] = bad_var
-            self.cov_params = cov_mat
+            cov_p[bad_variances, bad_variances] = bad_var
+        params[self.enabled_params] = p
+        self.params = params
+        self.cov_params = np.zeros((len(params), len(params)))
+        self.cov_params[np.ix_(self.enabled_params, self.enabled_params)] = cov_p
 
     def __call__(self, x):
         """Evaluate fitted function on new data.
@@ -1690,7 +1702,8 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
     def __copy__(self):
         """Shallow copy operation."""
-        return NonLinearLeastSquaresFit(self.func, self.params, self.func_jacobian, **self._extra_args)
+        return NonLinearLeastSquaresFit(self.func, self.params, self.enabled_params, self.func_jacobian,
+                                        **self._extra_args)
 
     def __deepcopy__(self, memo):
         """Deep copy operation.
@@ -1704,7 +1717,8 @@ class NonLinearLeastSquaresFit(ScatterFit):
             Dictionary that caches objects that are already copied
 
         """
-        return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo), self.func_jacobian,
+        return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo),
+                                        copy.deepcopy(self.enabled_params, memo), self.func_jacobian,
                                         **(copy.deepcopy(self._extra_args, memo)))
 
 #----------------------------------------------------------------------------------------------------------------------
@@ -1720,9 +1734,9 @@ class GaussianFit(ScatterFit):
 
     Parameters
     ----------
-    mean : array-like, shape (D,)
+    mean : array-like of float, shape (D,)
         Initial guess of D-dimensional mean vector
-    std : array-like, shape (D,), or float
+    std : array-like of float, shape (D,), or float
         Initial guess of D-dimensional vector of standard deviations, or a
         single standard deviation for all dimensions
     height : float
@@ -1730,16 +1744,16 @@ class GaussianFit(ScatterFit):
 
     Attributes
     ----------
-    mean : array, shape (D,)
+    mean : array of float, shape (D,)
         D-dimensional mean vector, either initial guess or final optimal value
-    std : array, shape (D,), or float
+    std : array of float, shape (D,), or float
         D-dimensional standard deviation vector or scalar, either initial guess
         or final optimal value
     height : float
         Height of Gaussian curve, either initial guess or final optimal value
-    std_mean : array, shape (D,)
+    std_mean : array of float, shape (D,)
         Standard error of mean vector, only set after :func:`fit`
-    std_std : array, shape (D,), or float
+    std_std : array of float, shape (D,), or float
         Standard error of standard deviation, only set after :func:`fit`
     std_height : float
         Standard error of height, only set after :func:`fit`
@@ -1826,7 +1840,7 @@ class GaussianFit(ScatterFit):
             return np.vstack((dy_dmean, dy_dheight, dy_dstd))
 
         # Internal non-linear least squares fitter
-        self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params, jac_gauss_diagcov)
+        self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params, func_jacobian=jac_gauss_diagcov)
         self.std_mean = self.std_std = self.std_height = None
 
     def fit(self, x, y, std_y=1.0):
