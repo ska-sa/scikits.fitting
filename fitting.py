@@ -1663,7 +1663,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
         # Try to salvage a singular precision matrix by using the pseudo-inverse in this case
         if cov_p is None:
             # The calculation of cov_p is lifted from scipy.optimize.leastsq
-            ipvt, fjac = results[2]['ipvt'], results[2]['fjac']
+            ipvt, fjac = infodict['ipvt'], infodict['fjac']
             perm = np.take(np.eye(len(ipvt)), ipvt - 1, 0)
             R = np.dot(np.triu(fjac.T[:len(ipvt), :]), perm)
             precision_mat, rcond = np.dot(R.T, R), 1e-15
