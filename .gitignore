@@ -1,0 +1,15 @@
+*.pyc
+*~
+*#
+*egg-info
+*.so
+*.bak
+*.c
+*.new
+doc/source/api
+doc/build
+source/api
+build
+dist
+*.swp
+.coverage
