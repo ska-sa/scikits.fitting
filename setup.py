@@ -36,6 +36,7 @@ def configuration(parent_package='', top_path=None):
     config.add_subpackage('scikits')
     config.add_subpackage(DISTNAME)
     config.add_data_files('scikits/__init__.py')
+    config.add_data_dir('scikits/fitting/test')    
 
     return config
 
@@ -64,6 +65,6 @@ if __name__ == "__main__":
         namespace_packages=['scikits'],
         packages=setuptools.find_packages(),
         include_package_data=True,
-        zip_safe=True, # the package can run out of an .egg file
+        zip_safe=False, # the package can run out of an .egg file
         #test_suite="tester", # for python setup.py test
         )
