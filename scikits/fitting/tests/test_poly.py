@@ -60,7 +60,7 @@ class TestPolynomial1DFit(TestCase):
         norm_poly = poly_set - mean_poly[:, np.newaxis]
         cov_poly = np.dot(norm_poly, norm_poly.T) / M
         std_poly = np.sqrt(np.diag(interp.cov_poly))
-        self.assertTrue((np.abs(mean_poly - self.poly) / std_poly < 0.25).all(),
+        self.assertTrue((np.abs(mean_poly - self.poly) / std_poly < 0.5).all(),
                         "Sample mean coefficient vector differs too much from true value")
         self.assertTrue((np.abs(cov_poly - interp.cov_poly) / np.abs(interp.cov_poly) < 0.5).all(),
                         "Sample coefficient covariance matrix differs too much from expected one")
@@ -139,9 +139,9 @@ class TestPolynomial2DFit(TestCase):
         norm_poly = poly_set - mean_poly[:, np.newaxis]
         cov_poly = np.dot(norm_poly, norm_poly.T) / M
         std_poly = np.sqrt(np.diag(interp.cov_poly))
-        self.assertTrue((np.abs(mean_poly - self.poly) / std_poly < 0.25).all(),
+        self.assertTrue((np.abs(mean_poly - self.poly) / std_poly < 0.5).all(),
                         "Sample mean coefficient vector differs too much from true value")
-        self.assertTrue((np.abs(cov_poly - interp.cov_poly) / np.abs(interp.cov_poly) < 0.5).all(),
+        self.assertTrue((np.abs(cov_poly - interp.cov_poly) / np.abs(interp.cov_poly) < 1.0).all(),
                         "Sample coefficient covariance matrix differs too much from expected one")
 
 class TestPiecewisePolynomial1DFit(TestCase):
