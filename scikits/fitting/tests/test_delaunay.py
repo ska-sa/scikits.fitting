@@ -28,7 +28,10 @@ class TestDelaunay2DScatterFit(TestCase):
 
     def test_fit_eval_nn(self):
         """Delaunay2DScatterFit: Basic function fitting and evaluation using data from a known function."""
-        interp = Delaunay2DScatterFit(default_val=self.default_val)
+        # At least exercise the jitter code path
+        interp = Delaunay2DScatterFit(default_val=self.default_val, jitter=True)
+        interp.fit(self.x, self.y)
+        interp = Delaunay2DScatterFit(default_val=self.default_val, jitter=False)
         self.assertRaises(NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
         interp.fit(self.x, self.y)
