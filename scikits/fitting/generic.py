@@ -1,3 +1,10 @@
+"""Generic fitters and base classes.
+
+:author: Ludwig Schwardt
+:license: Modified BSD
+
+"""
+
 import copy
 
 import numpy as np

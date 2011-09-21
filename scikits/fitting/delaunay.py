@@ -1,3 +1,10 @@
+"""Delaunay fitters.
+
+:author: Ludwig Schwardt
+:license: Modified BSD
+
+"""
+
 import numpy as np
 # Since scipy 0.7.0 the delaunay module lives in scikits
 try:

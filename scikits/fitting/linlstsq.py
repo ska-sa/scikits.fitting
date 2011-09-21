@@ -1,3 +1,10 @@
+"""Linear least-squares fitter.
+
+:author: Ludwig Schwardt
+:license: Modified BSD
+
+"""
+
 import numpy as np
 
 from .generic import ScatterFit, NotFittedError

@@ -1,3 +1,10 @@
+"""Polynomial fitters.
+
+:author: Ludwig Schwardt
+:license: Modified BSD
+
+"""
+
 import numpy as np
 import scipy
 import scipy.interpolate

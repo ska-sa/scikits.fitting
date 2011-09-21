@@ -1,3 +1,10 @@
+"""Utility functions.
+
+:author: Ludwig Schwardt
+:license: Modified BSD
+
+"""
+
 import copy
 
 import numpy as np

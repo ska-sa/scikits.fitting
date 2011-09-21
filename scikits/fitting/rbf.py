@@ -1,3 +1,10 @@
+"""RBF fitter.
+
+:author: Ludwig Schwardt
+:license: Modified BSD
+
+"""
+
 import numpy as np
 import scipy.interpolate
 

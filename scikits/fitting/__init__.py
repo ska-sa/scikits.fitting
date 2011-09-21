@@ -33,7 +33,6 @@ Scatter fitters
 - :class:`Polynomial1DFit` : Fit polynomial to 1-D data
 - :class:`Polynomial2DFit` : Fit polynomial to 2-D data
 - :class:`PiecewisePolynomial1DFit` : Fit piecewise polynomial to 1-D data
-- :class:`ReciprocalFit` : Interpolate the reciprocal of data
 - :class:`Independent1DFit` : Interpolate N-dimensional matrix along given axis
 - :class:`Delaunay2DScatterFit` : Interpolate scalar function of 2-D data, based on
                                   Delaunay triangulation (scattered data version)
