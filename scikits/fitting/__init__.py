@@ -75,15 +75,13 @@ def _setup_test():
     try:
         import nose as _nose
     except ImportError:
-        print('Could not load nose. Unit tests not available.')
-        return None
+        def test():
+            print('Could not load nose. Unit tests not available.')
+        return test
     else:
         import functools
         return functools.partial(_nose.run, 'scikits.fitting', argv=args)
-
 test = _setup_test()
-if test is None:
-    del test
 
 from generic import *
 from utils import *
