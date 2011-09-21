@@ -50,7 +50,7 @@ class TestLinearLeastSquaresFit(TestCase):
         std_params = np.sqrt(np.diag(interp.cov_params))
         self.assertTrue((np.abs(mean_params - self.params) / std_params < 0.25).all(),
                         "Sample mean parameter vector differs too much from true value")
-        self.assertTrue((np.abs(cov_params - interp.cov_params) / np.abs(interp.cov_params) < 0.5).all(),
+        self.assertTrue((np.abs(cov_params - interp.cov_params) / np.abs(interp.cov_params) < 1.0).all(),
                         "Sample parameter covariance matrix differs too much from expected one")
 
     def test_vs_numpy(self):

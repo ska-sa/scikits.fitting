@@ -27,7 +27,7 @@ class TestSpline1DFit(TestCase):
 
     def test_fit_eval(self):
         """Spline1DFit: Basic function fitting and evaluation using data from a known function."""
-        interp = Spline1DFit(3)
+        interp = Spline1DFit(degree=3, min_size=0.5)
         self.assertRaises(NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -64,13 +64,16 @@ class TestSpline2DGridFit(TestCase):
     def setUp(self):
         self.fit_dims = (10, 20)
         self.eval_dims = (8, 12)
-        # Training data is randomly sampled parabola (also does not have to be in ascending order)
+        # Training data is uniformly sampled parabola (does not have to be in ascending order)
         poly = np.array([1.0, 2.0, 1.0])
-        self.x = [np.random.randn(self.fit_dims[0]), np.random.randn(self.fit_dims[1])]
+        x0, x1 = np.linspace(0., 1., self.fit_dims[0]), np.linspace(0., 1., self.fit_dims[1])
+        np.random.shuffle(x0)
+        np.random.shuffle(x1)
+        self.x = [x0, x1]
         xx1, xx0 = np.meshgrid(self.x[1], self.x[0])
         self.y = poly[0]*xx0*xx0 + poly[1]*xx0*xx1 + poly[2]*xx1*xx1
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
-        self.testx = [0.1*np.random.randn(self.eval_dims[0]), 0.1*np.random.randn(self.eval_dims[1])]
+        self.testx = [0.25 + 0.5 * np.random.rand(self.eval_dims[0]), 0.25 + 0.5 * np.random.rand(self.eval_dims[1])]
         testx1, testx0 = np.meshgrid(self.testx[1], self.testx[0])
         self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
 
@@ -96,11 +99,13 @@ class TestSpline2DGridFit(TestCase):
         y_ensemble = []
         for m in xrange(3000):
             interp = Spline2DGridFit((3, 3))
-            interp.fit(self.x, self.y + 0.1*np.random.randn(*self.y.shape))
+            interp.fit(self.x, self.y + 0.1 * np.random.randn(*self.y.shape))
             y_ensemble.append(interp(self.testx))
         std_y_mc = np.dstack(y_ensemble).std(axis=2)
         # This is only accurate to a few percent, because of the relatively small number of Monte Carlo samples
-        assert_almost_equal(std_testy, std_y_mc, decimal=1)
+        rel_std_diff = np.abs(std_y_mc - std_testy) / np.abs(std_testy)
+        rel_std_diff_p90 = sorted(rel_std_diff.ravel())[int(0.90 * rel_std_diff.size)]
+        self.assertTrue(rel_std_diff_p90 < 0.1)
 
 if __name__ == "__main__":
     run_module_suite()

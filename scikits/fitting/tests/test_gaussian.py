@@ -51,7 +51,7 @@ class TestGaussianFitDiag(TestCase):
         cov_params = np.dot(norm_params, norm_params.T) / M
         estm_std_params = np.sqrt(np.diag(cov_params))
         std_params = np.r_[interp.std_mean, interp.std_height, interp.std_std]
-        self.assertTrue((np.abs(mean_params - true_params) / std_params < 0.2).all(),
+        self.assertTrue((np.abs(mean_params - true_params) / std_params < 0.5).all(),
                         "Sample mean parameter vector differs too much from true value")
         # Only check diagonal of cov matrix - the rest is probably affected by linearisation
         self.assertTrue((np.abs(estm_std_params - std_params) / std_params < 0.2).all(),
@@ -66,6 +66,26 @@ class TestGaussianFitCircular(TestCase):
         self.x = 7 * np.random.randn(2, 80)
         self.y = true_gauss(self.x)
         self.init_mean, self.init_std, self.init_height = [3, -2], 1, 1
+
+    def test_fit_eval_diagcov(self):
+        """GaussianFit (shared stdev): Basic function fitting and evaluation using data from a known function."""
+        interp = GaussianFit(self.init_mean, self.init_std, self.init_height)
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        assert_almost_equal(interp.mean, self.true_mean, decimal=7)
+        assert_almost_equal(interp.std, self.true_std, decimal=7)
+        assert_almost_equal(interp.height, self.true_height, decimal=7)
+        assert_almost_equal(y, self.y, decimal=7)
+
+class TestGaussianFitDegenerate(TestCase):
+    """Check the GaussianFit class with a singular parameter cov matrix."""
+
+    def setUp(self):
+        self.true_mean, self.true_std, self.true_height = [0, 0], 1., 0.
+        true_gauss = GaussianFit(self.true_mean, self.true_std, self.true_height)
+        self.x = 7 * np.random.randn(2, 80)
+        self.y = true_gauss(self.x)
+        self.init_mean, self.init_std, self.init_height = [0, 0], 1, 0
 
     def test_fit_eval_diagcov(self):
         """GaussianFit (shared stdev): Basic function fitting and evaluation using data from a known function."""
