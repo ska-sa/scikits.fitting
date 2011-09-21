@@ -53,6 +53,11 @@ class ScatterFit(object):
         y : array-like, shape (N,)
             Known output values as sequence or numpy array
 
+        Returns
+        -------
+        self : :class:`ScatterFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         raise NotImplementedError
 
@@ -107,6 +112,11 @@ class GridFit(object):
             ascending order) with corresponding lengths n_1, n_2, ..., n_D
         y : array-like, shape (n_1, n_2, ..., n_D)
             Known output values as a D-dimensional numpy array
+
+        Returns
+        -------
+        self : :class:`GridFit` object
+            Reference to self, to allow chaining of method calls
 
         """
         raise NotImplementedError
@@ -166,6 +176,11 @@ class Independent1DFit(ScatterFit):
         y : array-like, shape (d_1, d_2, ..., N, ..., d_D)
             Known output values as a D-dimensional numpy array
 
+        Returns
+        -------
+        self : :class:`Independent1DFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         x = np.atleast_1d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
@@ -190,7 +205,7 @@ class Independent1DFit(ScatterFit):
         for n in range(num_interps):
             flat_interps[n] = copy.deepcopy(self._interp)
             flat_interps[n].fit(x, flat_y[n])
-
+        return self
 
     def __call__(self, x):
         """Evaluate set of interpolator functions on new data.

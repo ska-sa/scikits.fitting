@@ -84,6 +84,11 @@ class Delaunay2DScatterFit(ScatterFit):
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
 
+        Returns
+        -------
+        self : :class:`Delaunay2DScatterFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         # Check dimensions of known data
         x = np.atleast_2d(np.asarray(x))
@@ -101,6 +106,7 @@ class Delaunay2DScatterFit(ScatterFit):
             tri = delaunay.Triangulation(x[0], x[1])
         if self.interp_type == 'nn':
             self._interp = tri.nn_interpolator(y, default_value=self.default_val)
+        return self
 
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.
@@ -184,6 +190,11 @@ class Delaunay2DGridFit(GridFit):
         y : array-like, shape (M, N)
             Known output values as a 2-D numpy array
 
+        Returns
+        -------
+        self : :class:`Delaunay2DGridFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         # Check dimensions of known data
         x = [np.atleast_1d(np.asarray(ax)) for ax in x]
@@ -202,6 +213,7 @@ class Delaunay2DGridFit(GridFit):
             self._interp = tri.nn_interpolator(y.ravel(), default_value=self.default_val)
         elif self.interp_type == 'linear':
             self._interp = tri.linear_interpolator(y.ravel(), default_value=self.default_val)
+        return self
 
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.

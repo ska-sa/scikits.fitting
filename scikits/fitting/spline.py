@@ -60,6 +60,11 @@ class Spline1DFit(ScatterFit):
             Measurement error or uncertainty of `y` values, expressed as standard
             deviation in units of `y` (overrides min_size setting)
 
+        Returns
+        -------
+        self : :class:`Spline1DFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         # Check dimensions of known data
         x = np.atleast_1d(np.asarray(x))
@@ -93,6 +98,7 @@ class Spline1DFit(ScatterFit):
         # Lower bound on uncertainty is determined by floating-point resolution (no upper bound)
         np.clip(std_y, max(np.mean(np.abs(y)), 1e-20) * np.finfo(y.dtype).eps, np.inf, out=std_y)
         self._interp = scipy.interpolate.UnivariateSpline(x, y, w=1. / std_y, k=self.degree, **self._extra_args)
+        return self
 
     def __call__(self, x):
         """Evaluate spline on new data.
@@ -158,6 +164,11 @@ class Spline2DScatterFit(ScatterFit):
             Measurement error or uncertainty of `y` values, expressed as standard
             deviation in units of `y`
 
+        Returns
+        -------
+        self : :class:`Spline2DScatterFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         # Check dimensions of known data
         x = np.atleast_2d(np.asarray(x))
@@ -176,6 +187,7 @@ class Spline2DScatterFit(ScatterFit):
         np.clip(std_y, max(np.mean(np.abs(y)), 1e-20) * np.finfo(y.dtype).eps, np.inf, out=std_y)
         self._interp = scipy.interpolate.SmoothBivariateSpline(x[0], x[1], y, w=1. / std_y, kx=self.degree[0],
                                                                ky=self.degree[1], **self._extra_args)
+        return self
 
     def __call__(self, x):
         """Evaluate spline on new scattered data.
@@ -251,6 +263,11 @@ class Spline2DGridFit(GridFit):
             disabled (typically to save time as this can be costly to calculate
             when M*N is large).
 
+        Returns
+        -------
+        self : :class:`Spline2DGridFit` object
+            Reference to self, to allow chaining of method calls
+
         Notes
         -----
         This propagates uncertainty through the spline fit based on the main idea
@@ -296,6 +313,7 @@ class Spline2DGridFit(GridFit):
                 interp = scipy.interpolate.RectBivariateSpline(xs, ys, testz.reshape(zs.shape), kx=self.degree[0],
                                                                ky=self.degree[1], **self._extra_args)
                 self._std_interps.append(interp)
+        return self
 
     def __call__(self, x, full_output=False):
         """Evaluate spline on a new rectangular grid.

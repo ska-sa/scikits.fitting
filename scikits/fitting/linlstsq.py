@@ -78,6 +78,11 @@ class LinearLeastSquaresFit(ScatterFit):
             Measurement error or uncertainty of `y` values, expressed as standard
             deviation in units of `y`
 
+        Returns
+        -------
+        self : :class:`LinearLeastSquaresFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         x = np.atleast_2d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
@@ -111,6 +116,7 @@ class LinearLeastSquaresFit(ScatterFit):
         # Also obtain covariance matrix of parameters (see NRinC, 2nd ed, Eq. 15.4.20)
         # In matrix form: Cp = V S^(-2) V^T = Vs Vs^T (also rescaling with max std_y)
         self.cov_params = np.dot(Vs, Vs.T) * (max_std_y ** 2)
+        return self
 
     def __call__(self, x, full_output=False):
         """Evaluate linear regression model on new x data.

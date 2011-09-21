@@ -50,6 +50,11 @@ class RbfScatterFit(ScatterFit):
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array or sequence
 
+        Returns
+        -------
+        self : :class:`RbfScatterFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         # Check dimensions of known data
         x = np.atleast_2d(np.asarray(x))
@@ -58,6 +63,7 @@ class RbfScatterFit(ScatterFit):
             raise ValueError("RBF interpolator requires input data with shape (D, N) " +
                              "and output data with shape (N,), got %s and %s instead" % (x.shape, y.shape))
         self._interp = scipy.interpolate.Rbf(*np.vstack((x, y)), **self._extra_args)
+        return self
 
     def __call__(self, x):
         """Evaluate RBF on new scattered data.

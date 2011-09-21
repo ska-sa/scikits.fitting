@@ -107,6 +107,11 @@ class NonLinearLeastSquaresFit(ScatterFit):
             Measurement error or uncertainty of `y` values, expressed as standard
             deviation in units of `y`
 
+        Returns
+        -------
+        self : :class:`NonLinearLeastSquaresFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         x, y = np.asarray(x), np.asarray(y)
         # Initialise full set of parameters (subset to be optimised will be inserted into this array before use)
@@ -153,6 +158,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
         self.params = params
         self.cov_params = np.zeros((len(params), len(params)))
         self.cov_params[np.ix_(self.enabled_params, self.enabled_params)] = cov_p
+        return self
 
     def __call__(self, x):
         """Evaluate fitted function on new data.

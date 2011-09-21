@@ -148,6 +148,11 @@ class GaussianFit(ScatterFit):
             Measurement error or uncertainty of `y` values, expressed as standard
             deviation in units of `y`
 
+        Returns
+        -------
+        self : :class:`GaussianFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         self._interp.fit(x, y, std_y)
         # Recreate Gaussian parameters
@@ -161,6 +166,7 @@ class GaussianFit(ScatterFit):
         self.std_mean = std_params[:D]
         self.std_height = std_params[D]
         self.std_std = std_params[D + 1] if len(self._interp.params) == D + 2 else std_params[D + 1:]
+        return self
 
     def __call__(self, x):
         """Evaluate function ``y = f(x)`` on new data.

@@ -82,6 +82,11 @@ class Polynomial1DFit(ScatterFit):
             Measurement error or uncertainty of `y` values, expressed as standard
             deviation in units of `y`
 
+        Returns
+        -------
+        self : :class:`Polynomial1DFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
         x = np.atleast_1d(np.asarray(x, dtype='double'))
@@ -98,6 +103,7 @@ class Polynomial1DFit(ScatterFit):
         tfm = offset_scale_mat(len(self.poly), self._mean)
         self.poly = np.dot(tfm, self._lstsq.params)
         self.cov_poly = np.dot(tfm, np.dot(self._lstsq.cov_params, tfm.T))
+        return self
 
     def __call__(self, x, full_output=False):
         """Evaluate polynomial on new data.
@@ -213,6 +219,11 @@ class Polynomial2DFit(ScatterFit):
             Measurement error or uncertainty of `y` values, expressed as standard
             deviation in units of `y`
 
+        Returns
+        -------
+        self : :class:`Polynomial2DFit` object
+            Reference to self, to allow chaining of method calls
+
         """
         # Upcast x and y to doubles, to ensure a high enough precision for the polynomial coefficients
         x = np.atleast_2d(np.array(x, dtype='double'))
@@ -229,6 +240,7 @@ class Polynomial2DFit(ScatterFit):
         tfm = np.kron(tfm0, tfm1)
         self.poly = np.dot(tfm, self._lstsq.params)
         self.cov_poly = np.dot(tfm, np.dot(self._lstsq.cov_params, tfm.T))
+        return self
 
     def __call__(self, x, full_output=False):
         """Evaluate polynomial on new data.
@@ -415,6 +427,11 @@ class PiecewisePolynomial1DFit(ScatterFit):
         y : array-like, shape (N,)
             Known output values as a 1-D numpy array, or sequence
 
+        Returns
+        -------
+        self : :class:`PiecewisePolynomial1DFit` object
+            Reference to self, to allow chaining of method calls
+
         Raises
         ------
         ValueError
@@ -463,6 +480,7 @@ class PiecewisePolynomial1DFit(ScatterFit):
                 self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
             except AttributeError:
                 raise ImportError("SciPy 0.7.0 or newer needed for higher-order piecewise polynomials")
+        return self
 
     def __call__(self, x):
         """Evaluate piecewise polynomial on new data.
