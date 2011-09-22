@@ -77,6 +77,10 @@ class ScatterFit(object):
         """
         raise NotImplementedError
 
+    def eval(self, x):
+        """Evaluate function on new data. See __call__ docstring for more help."""
+        return self.__call__(x)
+
 #----------------------------------------------------------------------------------------------------------------------
 #--- INTERFACE :  GridFit
 #----------------------------------------------------------------------------------------------------------------------
@@ -137,6 +141,10 @@ class GridFit(object):
 
         """
         raise NotImplementedError
+
+    def eval(self, x):
+        """Evaluate function on new data. See __call__ docstring for more help."""
+        return self.__call__(x)
 
 #----------------------------------------------------------------------------------------------------------------------
 #--- CLASS :  Independent1DFit

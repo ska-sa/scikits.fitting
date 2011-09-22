@@ -5,7 +5,7 @@ SciPy. All fitting routines conform to the following simple method interface:
 
 - __init__(p) : set parameters of interpolation function, e.g. polynomial degree
 - fit(x, y) : fit given input-output data
-- __call__(x) : evaluate function on new input data
+- __call__(x) / eval(x) : evaluate function on new input data
 
 Each interpolation routine falls in one of two categories: scatter fitting or
 grid fitting. They share the same interface, only differing in the definition
