@@ -1,0 +1,2 @@
+include README.txt LICENSE.txt MANIFEST.in 
+recursive-include scikits/fitting/tests *.py
