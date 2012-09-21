@@ -146,7 +146,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
             precision_mat, rcond = np.dot(R.T, R), 1e-15
             try:
                 cov_p = np.linalg.pinv(precision_mat, rcond)
-            except LinAlgError:
+            except np.linalg.LinAlgError:
                 # The standard SVD in NumPy is based on Lapack DGESDD, which is fast but occasionally struggles on
                 # pathological matrices, resulting in a LinAlgError (see NumPy ticket #990) - then all bets are off
                 cov_p = np.zeros(precision_mat.shape)
