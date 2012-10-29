@@ -14,7 +14,7 @@ MAINTAINER_EMAIL    = 'ludwig@ska.ac.za'
 URL                 = 'https://github.com/ludwigschwardt/scikits.fitting'
 LICENSE             = 'Modified BSD'
 DOWNLOAD_URL        = 'https://github.com/ludwigschwardt/scikits.fitting'
-VERSION             = '0.5'
+VERSION             = '0.5.1'
 
 import os
 import setuptools
