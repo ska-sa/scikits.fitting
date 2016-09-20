@@ -13,9 +13,10 @@ from .generic import ScatterFit, NotFittedError
 from .linlstsq import LinearLeastSquaresFit
 from .utils import offset_scale_mat
 
-#----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Polynomial1DFit
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# --- CLASS :  Polynomial1DFit
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class Polynomial1DFit(ScatterFit):
     """Fit polynomial to 1-D data.
@@ -128,9 +129,10 @@ class Polynomial1DFit(ScatterFit):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
         return self._lstsq(self._regressor(x), full_output)
 
-#----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Polynomial2DFit
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# --- CLASS :  Polynomial2DFit
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class Polynomial2DFit(ScatterFit):
     """Fit polynomial to 2-D data.
@@ -265,9 +267,10 @@ class Polynomial2DFit(ScatterFit):
             raise NotFittedError("Polynomial not fitted to data yet - first call .fit method")
         return self._lstsq(self._regressor(x), full_output)
 
-#----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  PiecewisePolynomial1DFit
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# --- CLASS :  PiecewisePolynomial1DFit
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 def _stepwise_interp(xi, yi, x):
     """Step-wise interpolate (or extrapolate) (xi, yi) values to x positions.
@@ -340,6 +343,7 @@ def _stepwise_interp(xi, yi, x):
     start = np.reshape(start, np.shape(x))
     return yi[start]
 
+
 def _linear_interp(xi, yi, x):
     """Linearly interpolate (or extrapolate) (xi, yi) values to x positions.
 
@@ -375,6 +379,7 @@ def _linear_interp(xi, yi, x):
     # Set up weight such that xi[start] => 0 and xi[end] => 1
     end_weight = (x - xi[start]) / (xi[end] - xi[start])
     return (1.0 - end_weight) * yi[start] + end_weight * yi[end]
+
 
 class PiecewisePolynomial1DFit(ScatterFit):
     """Fit piecewise polynomial to 1-D data.

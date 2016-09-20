@@ -9,9 +9,10 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
 from scikits.fitting import Independent1DFit, Polynomial1DFit, NotFittedError
+
 
 class TestIndependent1DFit(TestCase):
     """Check the Independent1DFit class."""

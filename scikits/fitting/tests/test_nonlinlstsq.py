@@ -9,21 +9,22 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
 from scikits.fitting import NonLinearLeastSquaresFit, LinearLeastSquaresFit, vectorize_fit_func
+
 
 class TestNonLinearLeastSquaresFit(TestCase):
     """Check the NonLinearLeastSquaresFit class."""
 
     def setUp(self):
         # Quadratic function centred at p
-        func = lambda p, x: ((x - p) ** 2).sum()
-        self.vFunc = vectorize_fit_func(func)
+        self.vFunc = vectorize_fit_func(lambda p, x: ((x - p) ** 2).sum())
         self.true_params = np.array([1, -4])
         self.init_params = np.array([0, 0])
         self.x = 4.0 * np.random.randn(2, 20)
         self.y = self.vFunc(self.true_params, self.x)
+
         # 2-D log Gaussian function
         def lngauss_diagcov(p, x):
             xminmu = x - p[:2, np.newaxis]
@@ -61,7 +62,7 @@ class TestNonLinearLeastSquaresFit(TestCase):
         assert_almost_equal(y2, self.y2, decimal=10)
 
     def test_fit_eval_linear(self):
-        """NonLinearLeastSquaresFit: Compare to LinearLeastSquaresFit on a linear problem (and check use of Jacobian)."""
+        """NonLinearLeastSquaresFit: Compare to LinearLeastSquaresFit on a linear problem and check use of Jacobian."""
         lin = LinearLeastSquaresFit()
         lin.fit(self.x3, self.y3, std_y=2.0)
         nonlin = NonLinearLeastSquaresFit(self.func3, self.init_params3, func_jacobian=self.jac3)
@@ -73,7 +74,7 @@ class TestNonLinearLeastSquaresFit(TestCase):
         nonlin_nojac.fit(self.x3, self.y3, std_y=0.1)
         assert_almost_equal(nonlin_nojac.params, self.true_params3, decimal=6)
         # Covariance matrix is way smaller than linear one...
-        
+
     def test_enabled_params(self):
         """NonLinearLeastSquaresFit: Check whether subset of parameters can be optimised."""
         lin = LinearLeastSquaresFit()

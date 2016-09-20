@@ -9,9 +9,10 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
 from scikits.fitting import Spline1DFit, Spline2DScatterFit, Spline2DGridFit, NotFittedError
+
 
 class TestSpline1DFit(TestCase):
     """Check the Spline1DFit class."""
@@ -22,7 +23,7 @@ class TestSpline1DFit(TestCase):
         self.x = np.random.randn(40)
         self.y = np.polyval(self.poly, self.x)
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
-        self.testx = 0.2*np.random.randn(40)
+        self.testx = 0.2 * np.random.randn(40)
         self.testy = np.polyval(self.poly, self.testx)
 
     def test_fit_eval(self):
@@ -35,6 +36,7 @@ class TestSpline1DFit(TestCase):
         assert_almost_equal(y, self.y, decimal=10)
         assert_almost_equal(testy, self.testy, decimal=10)
 
+
 class TestSpline2DScatterFit(TestCase):
     """Check the Spline2DScatterFit class."""
 
@@ -42,10 +44,11 @@ class TestSpline2DScatterFit(TestCase):
         # Training data is randomly sampled parabola
         poly = np.array([1.0, 2.0, 1.0])
         self.x = np.random.randn(2, 100)
-        self.y = poly[0]*self.x[0]**2 + poly[1]*self.x[0]*self.x[1] + poly[2]*self.x[1]**2
+        self.y = poly[0] * self.x[0] ** 2 + poly[1] * self.x[0] * self.x[1] + poly[2] * self.x[1] ** 2
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
-        self.testx = 0.2*np.random.randn(2, 100)
-        self.testy = poly[0]*self.testx[0]**2 + poly[1]*self.testx[0]*self.testx[1] + poly[2]*self.testx[1]**2
+        self.testx = 0.2 * np.random.randn(2, 100)
+        self.testy = poly[0] * self.testx[0] ** 2 + \
+            poly[1] * self.testx[0] * self.testx[1] + poly[2] * self.testx[1] ** 2
 
     def test_fit_eval(self):
         """Spline2DScatterFit: Basic function fitting and evaluation using data from a known function."""
@@ -57,6 +60,7 @@ class TestSpline2DScatterFit(TestCase):
         testy = interp(self.testx)
         assert_almost_equal(y, self.y, decimal=10)
         assert_almost_equal(testy, self.testy, decimal=10)
+
 
 class TestSpline2DGridFit(TestCase):
     """Check the Spline2DGridFit class."""
@@ -71,11 +75,11 @@ class TestSpline2DGridFit(TestCase):
         np.random.shuffle(x1)
         self.x = [x0, x1]
         xx1, xx0 = np.meshgrid(self.x[1], self.x[0])
-        self.y = poly[0]*xx0*xx0 + poly[1]*xx0*xx1 + poly[2]*xx1*xx1
+        self.y = poly[0] * xx0 * xx0 + poly[1] * xx0 * xx1 + poly[2] * xx1 * xx1
         # Test data is random samples of same parabola, but ensure that samples do not fall outside training set
         self.testx = [0.25 + 0.5 * np.random.rand(self.eval_dims[0]), 0.25 + 0.5 * np.random.rand(self.eval_dims[1])]
         testx1, testx0 = np.meshgrid(self.testx[1], self.testx[0])
-        self.testy = poly[0]*testx0**2 + poly[1]*testx0*testx1 + poly[2]*testx1**2
+        self.testy = poly[0] * testx0 ** 2 + poly[1] * testx0 * testx1 + poly[2] * testx1 ** 2
 
     def test_fit_eval(self):
         """Spline2DGridFit: Basic function fitting and evaluation using data from a known function."""

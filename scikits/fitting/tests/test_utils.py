@@ -9,9 +9,10 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_array_equal, assert_almost_equal, run_module_suite
 
 from scikits.fitting import squash, unsquash, randomise, Polynomial1DFit
+
 
 class TestUtils(TestCase):
     """Exercise utility functions."""
@@ -39,6 +40,7 @@ class TestUtils(TestCase):
         assert_array_equal(unsquash(y3, (0, 2), (2, 4, 10), True), self.x)
         assert_array_equal(unsquash(y4, (0, 2), (2, 4, 10), False), self.x)
         assert_array_equal(unsquash(y5, (0, 1, 2), (2, 4, 10), True), self.x)
+
 
 class TestRandomise(TestCase):
     """Check the randomisation of existing fits via randomise function."""

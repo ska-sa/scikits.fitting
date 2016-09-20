@@ -10,9 +10,10 @@ import copy
 import numpy as np
 import scipy
 
-#----------------------------------------------------------------------------------------------------------------------
-#--- FUNCTIONS
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# --- FUNCTIONS
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 def squash(x, flatten_axes, move_to_start=True):
     """Flatten array, but not necessarily all the way to a 1-D array.
@@ -82,6 +83,7 @@ def squash(x, flatten_axes, move_to_start=True):
     else:
         return x.transpose(main_axes + flatten_axes).reshape(main_shape + flatten_shape)
 
+
 def unsquash(x, flatten_axes, original_shape, move_from_start=True):
     """Restore an array that was reshaped by :func:`squash`.
 
@@ -121,6 +123,7 @@ def unsquash(x, flatten_axes, original_shape, move_from_start=True):
     else:
         return x.reshape(main_shape + unflatten_shape).transpose(np.array(main_axes + flatten_axes).argsort())
 
+
 def scalar(x):
     """Ensure that a variable contains a scalar.
 
@@ -148,6 +151,7 @@ def scalar(x):
     assert np.shape(squeezed_x) == (), "Expected array %s to be a scalar" % (x,)
     return np.atleast_1d(squeezed_x)[0]
 
+
 def sort_grid(x, y, z):
     """Ensure that the coordinates of a rectangular grid are in ascending order.
 
@@ -174,6 +178,7 @@ def sort_grid(x, y, z):
     y_ind = np.argsort(y)
     return x[x_ind], y[y_ind], z[x_ind, :][:, y_ind]
 
+
 def desort_grid(x, y, z):
     """Undo the effect of :func:`sort_grid`.
 
@@ -198,6 +203,7 @@ def desort_grid(x, y, z):
     x_ind = np.argsort(np.argsort(x))
     y_ind = np.argsort(np.argsort(y))
     return z[x_ind, :][:, y_ind]
+
 
 def vectorize_fit_func(func):
     """Factory that creates vectorised version of function to be fitted to data.
@@ -226,6 +232,7 @@ def vectorize_fit_func(func):
         # Move column dimension back to the end
         return np.rollaxis(column_seq_y, 0, len(column_seq_y.shape))
     return vec_func
+
 
 def randomise(interp, x, y, method='shuffle'):
     """Randomise fitted function parameters by resampling residuals.
@@ -284,6 +291,7 @@ def randomise(interp, x, y, method='shuffle'):
     random_interp.fit(x, fitted_y + residuals)
     return random_interp
 
+
 def pascal(n):
     """Create n-by-n upper triangular Pascal matrix.
 
@@ -341,6 +349,7 @@ def pascal(n):
     u[0, -1] = 1.
     return u
 
+
 def offset_scale_mat(n, offset=0., scale=1.):
     """Matrix that transforms polynomial coefficients to account for offset/scale.
 
@@ -353,7 +362,7 @@ def offset_scale_mat(n, offset=0., scale=1.):
     :math:`p` and :math:`q`, related by
 
     .. math:: \sum_{i=0}^{n-1} p_i \left(\frac{x - m}{s}\right)^{n-1-i} = \sum_{k=0}^{n-1} q_k x^{n-1-k},
- 
+
     with offset :math:`m` and scale :math:`s`, this calculates the matrix
     :math:`M` so that :math:`q = M p`.
 
@@ -381,6 +390,6 @@ def offset_scale_mat(n, offset=0., scale=1.):
 
     """
     poly_offset = np.fliplr(np.vander([-offset], n))
-    offset_mat = scipy.linalg.toeplitz(poly_offset, np.r_[1., np.zeros(n-1)])
+    offset_mat = scipy.linalg.toeplitz(poly_offset, np.r_[1., np.zeros(n - 1)])
     poly_scale = np.vander([scale], n)
     return np.fliplr(np.flipud(pascal(n))) * offset_mat / poly_scale

@@ -9,9 +9,10 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
 from scikits.fitting import LinearLeastSquaresFit, NotFittedError
+
 
 class TestLinearLeastSquaresFit(TestCase):
     """Fit linear regression model to data from a known model, and compare."""
