@@ -2,7 +2,7 @@
 
 import os
 
-from setuptools import dist, setup, find_packages
+from setuptools import dist, find_packages
 
 # Ensure we have numpy before we start as it is needed before we call setup()
 # If not installed system-wide it will be downloaded into the local .eggs dir
