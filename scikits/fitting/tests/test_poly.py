@@ -9,10 +9,11 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_equal, assert_almost_equal, run_module_suite
 
 from scikits.fitting import Polynomial1DFit, Polynomial2DFit, PiecewisePolynomial1DFit, NotFittedError
 from scikits.fitting.poly import _stepwise_interp, _linear_interp
+
 
 class TestPolynomial1DFit(TestCase):
     """Fit a 1-D polynomial to data from a known polynomial, and compare."""
@@ -85,6 +86,7 @@ class TestPolynomial1DFit(TestCase):
         interp.fit([1.0], [1.0])
         assert_almost_equal(interp.poly, [1.0], decimal=10)
 
+
 class TestPolynomial2DFit(TestCase):
     """Fit a 2-D polynomial to data from a known polynomial, and compare."""
 
@@ -143,6 +145,7 @@ class TestPolynomial2DFit(TestCase):
                         "Sample mean coefficient vector differs too much from true value")
         self.assertTrue((np.abs(cov_poly - interp.cov_poly) / np.abs(interp.cov_poly) < 1.0).all(),
                         "Sample coefficient covariance matrix differs too much from expected one")
+
 
 class TestPiecewisePolynomial1DFit(TestCase):
     """Fit a 1-D piecewise polynomial to data from a known polynomial, and compare."""

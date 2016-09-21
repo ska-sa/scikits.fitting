@@ -9,9 +9,10 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
 from scikits.fitting import GaussianFit
+
 
 class TestGaussianFitDiag(TestCase):
     """Check the GaussianFit class with different variances on each dimension."""
@@ -37,7 +38,7 @@ class TestGaussianFitDiag(TestCase):
         assert_almost_equal(y, self.y, decimal=7)
 
     def test_cov_params(self):
-        """GaussianFit (independent stdevs): Obtain sample statistics of parameters and compare to calculated covariance matrix."""
+        """GaussianFit (independent stdevs): Obtain sample statistics of params and compare to calculated cov matrix."""
         interp = GaussianFit(self.init_mean, self.init_std, self.init_height)
         true_params = np.r_[self.true_mean, self.true_height, self.true_std]
         std_y = 0.1
@@ -56,6 +57,7 @@ class TestGaussianFitDiag(TestCase):
         # Only check diagonal of cov matrix - the rest is probably affected by linearisation
         self.assertTrue((np.abs(estm_std_params - std_params) / std_params < 0.2).all(),
                         "Sample parameter standard deviation differs too much from expected one")
+
 
 class TestGaussianFitCircular(TestCase):
     """Check the GaussianFit class with a single variance on all dimensions."""
@@ -76,6 +78,7 @@ class TestGaussianFitCircular(TestCase):
         assert_almost_equal(interp.std, self.true_std, decimal=7)
         assert_almost_equal(interp.height, self.true_height, decimal=7)
         assert_almost_equal(y, self.y, decimal=7)
+
 
 class TestGaussianFitDegenerate(TestCase):
     """Check the GaussianFit class with a singular parameter cov matrix."""

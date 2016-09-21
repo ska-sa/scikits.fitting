@@ -13,9 +13,10 @@ import scipy.optimize
 from .generic import ScatterFit
 from .utils import squash
 
-#----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  NonLinearLeastSquaresFit
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# --- CLASS :  NonLinearLeastSquaresFit
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class NonLinearLeastSquaresFit(ScatterFit):
     """Fit a generic function to data, based on non-linear least squares optimisation.
@@ -116,6 +117,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
         x, y = np.asarray(x), np.asarray(y)
         # Initialise full set of parameters (subset to be optimised will be inserted into this array before use)
         params = self.initial_params[:]
+
         # Calculate R = prod(D_y) * N weighted residuals (leastsq will minimise sum(residuals ** 2))
         def residuals(p):
             params[self.enabled_params] = p

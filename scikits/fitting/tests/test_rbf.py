@@ -9,13 +9,14 @@
 """
 
 import numpy as np
-from numpy.testing import *
+from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
 try:
     from scikits.fitting import RbfScatterFit, NotFittedError
     rbf_found = True
 except ImportError:
     rbf_found = False
+
 
 class TestRbfScatterFit(TestCase):
     """Check the RbfScatterFit class (only if Rbf is installed in SciPy)."""
@@ -34,7 +35,7 @@ class TestRbfScatterFit(TestCase):
         else:
             return
         self.assertRaises(NotFittedError, interp, self.x)
-        self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        self.assertRaises(ValueError, interp.fit, self.y, self.y[:-1])
         interp.fit(self.x, self.y)
         y = interp(self.x)
         testy = interp(self.testx)

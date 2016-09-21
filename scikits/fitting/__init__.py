@@ -66,7 +66,16 @@ Helper functions
 
 """
 
-import os.path as _osp
+from generic import *
+from utils import *
+from delaunay import *
+from gaussian import *
+from linlstsq import *
+from nonlinlstsq import *
+from poly import *
+from rbf import *
+from spline import *
+
 
 def _setup_test():
     """Create test() method that will run unit tests via nose."""
@@ -81,13 +90,3 @@ def _setup_test():
         import functools
         return functools.partial(_nose.run, 'scikits.fitting', argv=args)
 test = _setup_test()
-
-from generic import *
-from utils import *
-from delaunay import *
-from gaussian import *
-from linlstsq import *
-from nonlinlstsq import *
-from poly import *
-from rbf import *
-from spline import *

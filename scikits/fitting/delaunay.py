@@ -28,9 +28,10 @@ except ImportError:
 
 from .generic import ScatterFit, GridFit, NotFittedError
 
-#----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Delaunay2DScatterFit
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# --- CLASS :  Delaunay2DScatterFit
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class Delaunay2DScatterFit(ScatterFit):
     """Interpolate scalar function of 2-D data, based on Delaunay triangulation
@@ -132,9 +133,10 @@ class Delaunay2DScatterFit(ScatterFit):
             raise NotFittedError("Interpolator function not fitted to data yet - first call .fit method")
         return self._interp(x[0], x[1])
 
-#----------------------------------------------------------------------------------------------------------------------
-#--- CLASS :  Delaunay2DGridFit
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# --- CLASS :  Delaunay2DGridFit
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class Delaunay2DGridFit(GridFit):
     """Interpolate a scalar function defined on a 2-D grid, based on Delaunay
@@ -245,4 +247,5 @@ class Delaunay2DGridFit(GridFit):
                              "got %s instead" % ([ax.shape for ax in x],))
         if self._interp is None:
             raise NotFittedError("Interpolator function not fitted to data yet - first call .fit method")
-        return self._interp[x[0][0]:x[0][-1]:len(x[0])*1j, x[1][0]:x[1][-1]:len(x[1])*1j]
+        return self._interp[x[0][0]:x[0][-1]:len(x[0]) * 1j,
+                            x[1][0]:x[1][-1]:len(x[1]) * 1j]
