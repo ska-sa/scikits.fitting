@@ -482,9 +482,12 @@ class PiecewisePolynomial1DFit(ScatterFit):
             self._poly = lambda new_x: _linear_interp(x, y, np.asarray(new_x))
         else:
             try:
-                self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
+                self._poly = scipy.interpolate.BPoly.from_derivatives(x, y_list, orders=None)
             except AttributeError:
-                raise ImportError("SciPy 0.7.0 or newer needed for higher-order piecewise polynomials")
+                try:
+                    self._poly = scipy.interpolate.PiecewisePolynomial(x, y_list, orders=None, direction=1)
+                except AttributeError:
+                    raise ImportError("SciPy 0.7.0 or newer needed for higher-order piecewise polynomials")
         return self
 
     def __call__(self, x):
