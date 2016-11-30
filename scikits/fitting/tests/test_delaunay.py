@@ -27,14 +27,34 @@ class TestDelaunay2DScatterFit(TestCase):
         self.outsidex = np.array([[10], [10]])
         self.outsidey = np.array([self.default_val])
 
-    def test_fit_eval_nn(self):
+    def test_fit_eval(self):
         """Delaunay2DScatterFit: Basic function fitting and evaluation using data from a known function."""
         # At least exercise the jitter code path
         interp = Delaunay2DScatterFit(default_val=self.default_val, jitter=True)
         interp.fit(self.x, self.y)
+        # Test cubic interpolation
         interp = Delaunay2DScatterFit(default_val=self.default_val, jitter=False)
         self.assertRaises(NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y)
+        interp.fit(self.x, self.y)
+        self.assertRaises(ValueError, interp, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        assert_almost_equal(y, self.y, decimal=10)
+        assert_almost_equal(testy, self.testy, decimal=10)
+        assert_almost_equal(outsidey, self.outsidey, decimal=10)
+        # Test cubic_fast interpolation
+        interp = Delaunay2DScatterFit(default_val=self.default_val, interp_type='cubic_fast')
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        assert_almost_equal(y, self.y, decimal=10)
+        assert_almost_equal(testy, self.testy, decimal=10)
+        assert_almost_equal(outsidey, self.outsidey, decimal=10)
+        # Test linear interpolation
+        interp = Delaunay2DScatterFit(default_val=self.default_val, interp_type='linear')
         interp.fit(self.x, self.y)
         y = interp(self.x)
         testy = interp(self.testx)
