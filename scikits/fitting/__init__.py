@@ -47,8 +47,6 @@ Grid fitters
 ------------
 
 - :class:`GridFit` : Abstract base class for grid fitters
-- :class:`Delaunay2DGridFit` : Interpolate scalar function defined on 2-D grid,
-                               based on Delaunay triangulation
 - :class:`Spline2DGridFit` : Fit a B-spline to 2-D data on a rectangular grid
 
 Helper functions
