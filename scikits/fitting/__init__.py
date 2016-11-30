@@ -66,6 +66,8 @@ Helper functions
 
 """
 
+import logging
+
 from generic import *
 from utils import *
 from delaunay import *
@@ -77,6 +79,9 @@ from rbf import *
 from spline import *
 
 
+logger = logging.getLogger(__name__)
+
+
 def _setup_test():
     """Create test() method that will run unit tests via nose."""
     args = ['', '--exe', '-w', __path__[0]]
@@ -84,7 +89,7 @@ def _setup_test():
         import nose as _nose
     except ImportError:
         def test():
-            print('Could not load nose. Unit tests not available.')
+            logger.debug('Could not load nose. Unit tests not available.')
         return test
     else:
         import functools

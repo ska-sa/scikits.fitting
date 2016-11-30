@@ -5,9 +5,14 @@
 
 """
 
+import logging
+
 import numpy as np
 
 from .generic import ScatterFit, NotFittedError
+
+
+logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # --- CLASS :  LinearLeastSquaresFit
@@ -106,7 +111,7 @@ class LinearLeastSquaresFit(ScatterFit):
         s_cutoff = len(x) * np.finfo(x.dtype).eps * s[0] if self.rcond is None else self.rcond * s[0]
         # Warn if the effective rank < P (i.e. some singular values are considered to be zero)
         if np.any(s < s_cutoff):
-            print('Least-squares fit may be poorly conditioned')
+            logger.warning('Least-squares fit may be poorly conditioned')
         # Invert zero singular values to infinity, as we are actually interested in reciprocal of s,
         # and zero singular values should be replaced by zero reciprocal values a la pseudo-inverse
         s[s < s_cutoff] = np.inf

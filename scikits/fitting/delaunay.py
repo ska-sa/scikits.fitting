@@ -4,6 +4,7 @@
 :license: Modified BSD
 
 """
+import logging
 
 import numpy as np
 # Since scipy 0.7.0 the delaunay module lives in scikits
@@ -27,6 +28,9 @@ except ImportError:
             delaunay_found = False
 
 from .generic import ScatterFit, GridFit, NotFittedError
+
+
+logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # --- CLASS :  Delaunay2DScatterFit
