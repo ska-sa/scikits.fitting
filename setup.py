@@ -52,7 +52,7 @@ if __name__ == "__main__":
                        'License :: OSI Approved :: BSD License',
                        'Topic :: Scientific/Engineering'],
           configuration=configuration,
-          install_requires=['numpy', 'scipy', 'matplotlib'],
+          install_requires=['numpy', 'scipy>=0.9'],
           namespace_packages=['scikits'],
           packages=find_packages(),
           include_package_data=True,
