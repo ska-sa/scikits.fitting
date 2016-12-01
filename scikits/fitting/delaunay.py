@@ -1,14 +1,7 @@
 """Delaunay fitters.
 
-There are currently (2016) two viable Delaunay options:
-
-  - scipy.spatial.Delaunay (since scipy 0.9.0)
-  - matplotlib.tri.Triangulation (since matplotlib 0.98.3)
-
-Since matplotlib 1.4.0, both are based on Qhull and therefore quite robust.
-In addition matplotlib has linear and cubic interpolators on top of the
-triangulation, which is what scikits.fitting wants. Therefore we use the
-latter for now, until scipy gains interpolation too.
+These interpolators are the ones underlying :mod:`scipy.interpolate.griddata`,
+unpacked to split the fitting and evaluation stages.
 
 :author: Ludwig Schwardt
 :license: Modified BSD
@@ -17,7 +10,9 @@ latter for now, until scipy gains interpolation too.
 import logging
 
 import numpy as np
-import matplotlib.tri as mtri
+# Interpolators based on triangulation available since scipy 0.9.0
+from scipy.interpolate import (CloughTocher2DInterpolator, LinearNDInterpolator,
+                               NearestNDInterpolator)
 
 from .generic import ScatterFit, NotFittedError
 
@@ -36,17 +31,17 @@ class Delaunay2DScatterFit(ScatterFit):
     'y' coordinates of points in a plane. The 2-D points are therefore stored as
     column vectors in *x*. The *y* data for this object is a 1-D array, which
     represents the scalar 'z' value of the function defined on the plane
-    (the symbols in quotation marks are the names for these variables used in
-    the ``matplotlib.tri`` documentation). The 2-D *x* coordinates do not have
-    to lie on a regular grid, and can be in any order.
+    (the symbols in quotation marks are the typical mathematical names for
+    these variables). The 2-D *x* coordinates do not have to lie on a regular
+    grid, and can be in any order.
 
     Parameters
     ----------
-    interp_type : {'cubic', 'cubic_fast', 'linear'}, optional
+    interp_type : {'cubic', 'linear', 'nearest'}, optional
         String indicating type of interpolation
     default_val : float, optional
         Default value used when trying to extrapolate beyond convex hull of
-        known data
+        known data (ignored for 'nearest')
     jitter : bool, optional
         True to add small amount of jitter to *x* to make degenerate
         triangulation unlikely (generally not needed with Qhull back-end)
@@ -54,7 +49,7 @@ class Delaunay2DScatterFit(ScatterFit):
     """
     def __init__(self, interp_type='cubic', default_val=np.nan, jitter=False):
         ScatterFit.__init__(self)
-        interps = ('cubic', 'cubic_fast', 'linear')
+        interps = ('cubic', 'linear', 'nearest')
         if interp_type not in interps:
             raise ValueError("Interpolator has to be one of %s, not %r" %
                              (interps, interp_type))
@@ -95,13 +90,12 @@ class Delaunay2DScatterFit(ScatterFit):
         if self.jitter:
             x = x + 0.00001 * x.std(axis=1)[:, np.newaxis] * \
                 np.random.standard_normal(x.shape)
-        tri = mtri.Triangulation(x[0], x[1])
         if self.interp_type == 'cubic':
-            self._interp = mtri.CubicTriInterpolator(tri, y)
-        elif self.interp_type == 'cubic_fast':
-            self._interp = mtri.CubicTriInterpolator(tri, y, kind='geom')
+            self._interp = CloughTocher2DInterpolator(x.T, y, fill_value=self.default_val)
+        elif self.interp_type == 'linear':
+            self._interp = LinearNDInterpolator(x.T, y, fill_value=self.default_val)
         else:
-            self._interp = mtri.LinearTriInterpolator(tri, y)
+            self._interp = NearestNDInterpolator(x.T, y)
         return self
 
     def __call__(self, x):
@@ -128,4 +122,4 @@ class Delaunay2DScatterFit(ScatterFit):
         if self._interp is None:
             raise NotFittedError("Interpolator function not fitted to data "
                                  "yet - first call .fit method")
-        return self._interp(x[0], x[1]).filled(self.default_val)
+        return self._interp(x.T)

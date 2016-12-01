@@ -44,15 +44,6 @@ class TestDelaunay2DScatterFit(TestCase):
         assert_almost_equal(y, self.y, decimal=10)
         assert_almost_equal(testy, self.testy, decimal=10)
         assert_almost_equal(outsidey, self.outsidey, decimal=10)
-        # Test cubic_fast interpolation
-        interp = Delaunay2DScatterFit(default_val=self.default_val, interp_type='cubic_fast')
-        interp.fit(self.x, self.y)
-        y = interp(self.x)
-        testy = interp(self.testx)
-        outsidey = interp(self.outsidex)
-        assert_almost_equal(y, self.y, decimal=10)
-        assert_almost_equal(testy, self.testy, decimal=10)
-        assert_almost_equal(outsidey, self.outsidey, decimal=10)
         # Test linear interpolation
         interp = Delaunay2DScatterFit(default_val=self.default_val, interp_type='linear')
         interp.fit(self.x, self.y)
@@ -62,6 +53,16 @@ class TestDelaunay2DScatterFit(TestCase):
         assert_almost_equal(y, self.y, decimal=10)
         assert_almost_equal(testy, self.testy, decimal=10)
         assert_almost_equal(outsidey, self.outsidey, decimal=10)
+        # Test nearest-neighbour interpolation
+        interp = Delaunay2DScatterFit(default_val=self.default_val, interp_type='nearest')
+        interp.fit(self.x, self.y)
+        y = interp(self.x)
+        testy = interp(self.testx)
+        outsidey = interp(self.outsidex)
+        assert_almost_equal(y, self.y, decimal=10)
+        assert_almost_equal(testy, self.testy, decimal=10)
+        # Nearest-neighbour interpolation has no outside value
+        # assert_almost_equal(outsidey, self.outsidey, decimal=10)
 
 
 if __name__ == "__main__":
