@@ -87,7 +87,7 @@ def _setup_test():
         import nose as _nose
     except ImportError:
         def test():
-            logger.debug('Could not load nose. Unit tests not available.')
+            logger.warning('Could not load nose. Unit tests not available.')
         return test
     else:
         import functools
