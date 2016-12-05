@@ -44,7 +44,7 @@ class Delaunay2DScatterFit(ScatterFit):
         known data (ignored for 'nearest')
     jitter : bool, optional
         True to add small amount of jitter to *x* to make degenerate
-        triangulation unlikely (generally not needed with Qhull back-end)
+        triangulation unlikely (generally not needed)
 
     """
     def __init__(self, interp_type='cubic', default_val=np.nan, jitter=False):
