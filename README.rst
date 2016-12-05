@@ -37,9 +37,9 @@ Scatter fitters
 - ``PiecewisePolynomial1DFit``: Fit piecewise polynomial to 1-D data
 - ``Independent1DFit``: Interpolate N-dimensional matrix along given axis
 - ``Delaunay2DScatterFit``: Interpolate scalar function of 2-D data, based on
-  Delaunay triangulation (scattered data version)
+  Delaunay triangulation and cubic / linear interpolation
 - ``NonLinearLeastSquaresFit``: Fit a generic function to data, based on
-  non-linear least squares optimisation.
+  non-linear least squares optimisation
 - ``GaussianFit``: Fit Gaussian curve to multi-dimensional data
 - ``Spline1DFit``: Fit a B-spline to 1-D data
 - ``Spline2DScatterFit``: Fit a B-spline to scattered 2-D data

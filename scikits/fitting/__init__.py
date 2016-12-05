@@ -1,3 +1,19 @@
+################################################################################
+# Copyright (c) 2007-2016, National Research Foundation (Square Kilometre Array)
+#
+# Licensed under the BSD 3-Clause License (the "License"); you may not use
+# this file except in compliance with the License. You may obtain a copy
+# of the License at
+#
+#   https://opensource.org/licenses/BSD-3-Clause
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
+
 """Unified interface to SciPy function fitting routines.
 
 This module provides a unified interface to the fitting of functions to data with
@@ -66,20 +82,20 @@ Helper functions
 
 import warnings
 
-from generic import *
-from utils import *
-from delaunay import *
-from gaussian import *
-from linlstsq import *
-from nonlinlstsq import *
-from poly import *
-from rbf import *
-from spline import *
+from generic import *  # noqa: F403 (simplifies API export)
+from utils import *  # noqa: F403
+from delaunay import *  # noqa: F403
+from gaussian import *  # noqa: F403
+from linlstsq import *  # noqa: F403
+from nonlinlstsq import *  # noqa: F403
+from poly import *  # noqa: F403
+from rbf import *  # noqa: F403
+from spline import *  # noqa: F403
 
 
 def _setup_test():
     """Create test() method that will run unit tests via nose."""
-    args = ['', '--exe', '-w', __path__[0]]
+    args = ['', '--exe', '-w', __path__[0]]  # noqa: F405 (__path__ is special)
     try:
         import nose as _nose
     except ImportError:
