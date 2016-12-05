@@ -47,12 +47,12 @@ def configuration(parent_package='', top_path=None):
 
     return config
 
+here = os.path.abspath(os.path.dirname(__file__))
+readme = open(os.path.join(here, 'README.rst')).read()
+news = open(os.path.join(here, 'NEWS.rst')).read()
+long_description = readme + '\n\n' + news
 
 if __name__ == "__main__":
-
-    with open('README.rst') as readme:
-        long_description = readme.read()
-
     setup(name='scikits.fitting',
           description='Framework for fitting functions to data with SciPy',
           long_description=long_description,
