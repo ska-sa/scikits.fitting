@@ -23,17 +23,12 @@ unpacked to split the fitting and evaluation stages.
 :license: Modified BSD
 
 """
-import logging
-
 import numpy as np
 # Interpolators based on triangulation available since scipy 0.9.0
 from scipy.interpolate import (CloughTocher2DInterpolator, LinearNDInterpolator,
                                NearestNDInterpolator)
 
 from .generic import ScatterFit, NotFittedError
-
-
-logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # --- CLASS :  Delaunay2DScatterFit
