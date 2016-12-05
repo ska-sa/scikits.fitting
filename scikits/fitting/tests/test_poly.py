@@ -157,12 +157,6 @@ class TestPiecewisePolynomial1DFit(TestCase):
 
     def test_fit_eval(self):
         """PiecewisePolynomial1DFit: Basic function fitting and evaluation using data from a known function."""
-        # Ignore test if SciPy version is below 0.7.0
-        try:
-            import scipy.interpolate
-            scipy.interpolate.PiecewisePolynomial
-        except AttributeError:
-            return
         interp = PiecewisePolynomial1DFit(max_degree=3)
         self.assertRaises(NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, [0, 0], [1, 2])

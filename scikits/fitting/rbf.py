@@ -29,10 +29,6 @@ class RbfScatterFit(ScatterFit):
     """
     def __init__(self, **kwargs):
         ScatterFit.__init__(self)
-        try:
-            scipy.interpolate.Rbf
-        except AttributeError:
-            raise ImportError("scipy.interpolate.Rbf class not found - you need SciPy 0.7.0 or newer")
         # Extra keyword arguments to Rbf class
         self._extra_args = kwargs
         # Interpolator function, only set after :func:`fit`
@@ -63,6 +59,7 @@ class RbfScatterFit(ScatterFit):
         if (len(x.shape) != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
             raise ValueError("RBF interpolator requires input data with shape (D, N) " +
                              "and output data with shape (N,), got %s and %s instead" % (x.shape, y.shape))
+        # RBF interpolator available since scipy 0.7.0
         self._interp = scipy.interpolate.Rbf(*np.vstack((x, y)), **self._extra_args)
         return self
 

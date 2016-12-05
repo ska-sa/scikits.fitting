@@ -11,11 +11,7 @@
 import numpy as np
 from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
-try:
-    from scikits.fitting import RbfScatterFit, NotFittedError
-    rbf_found = True
-except ImportError:
-    rbf_found = False
+from scikits.fitting import RbfScatterFit, NotFittedError
 
 
 class TestRbfScatterFit(TestCase):
@@ -30,10 +26,7 @@ class TestRbfScatterFit(TestCase):
 
     def test_fit_eval(self):
         """RbfScatterFit: Basic function fitting and evaluation using data from a known function."""
-        if rbf_found:
-            interp = RbfScatterFit()
-        else:
-            return
+        interp = RbfScatterFit()
         self.assertRaises(NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y[:-1])
         interp.fit(self.x, self.y)

@@ -47,8 +47,6 @@ Grid fitters
 ------------
 
 - :class:`GridFit` : Abstract base class for grid fitters
-- :class:`Delaunay2DGridFit` : Interpolate scalar function defined on 2-D grid,
-                               based on Delaunay triangulation
 - :class:`Spline2DGridFit` : Fit a B-spline to 2-D data on a rectangular grid
 
 Helper functions
@@ -65,6 +63,8 @@ Helper functions
                       residuals
 
 """
+
+import warnings
 
 from generic import *
 from utils import *
@@ -84,7 +84,7 @@ def _setup_test():
         import nose as _nose
     except ImportError:
         def test():
-            print('Could not load nose. Unit tests not available.')
+            warnings.warn('Could not import nose. Unit tests not available.')
         return test
     else:
         import functools
