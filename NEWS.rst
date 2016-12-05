@@ -1,7 +1,7 @@
 History
 =======
 
-0.6 (2016-12-10)
+0.6 (2016-12-05)
 ----------------
 
 * Fix pip installation, clean up setup procedure, flake8 and add README
