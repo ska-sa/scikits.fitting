@@ -33,7 +33,7 @@ from .generic import ScatterFit, NotFittedError
 
 
 class LinearLeastSquaresFit(ScatterFit):
-    """Fit linear regression model to data using the SVD.
+    r"""Fit linear regression model to data using the SVD.
 
     This fits a linear function of the form :math:`y = p^T x` to a sequence of N
     P-dimensional input vectors :math:`x` and a corresponding sequence of N

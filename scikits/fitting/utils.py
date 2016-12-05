@@ -367,7 +367,7 @@ def pascal(n):
 
 
 def offset_scale_mat(n, offset=0., scale=1.):
-    """Matrix that transforms polynomial coefficients to account for offset/scale.
+    r"""Matrix that transforms polynomial coefficients to account for offset/scale.
 
     This matrix can be used to transform a vector of polynomial coefficients
     that operate on scaled and shifted data to a vector of coefficients that

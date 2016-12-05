@@ -24,11 +24,12 @@ from setuptools import dist, find_packages
 # If not installed system-wide it will be downloaded into the local .eggs dir
 dist.Distribution(dict(setup_requires='numpy'))
 
-from numpy.distutils.core import setup
-from numpy.distutils.misc_util import Configuration
+from numpy.distutils.core import setup  # noqa: E402 (needs pre-setup above)
+from numpy.distutils.misc_util import Configuration  # noqa: E402
 
 
 def configuration(parent_package='', top_path=None):
+    """Configuration to deal with scikits namespace."""
     if os.path.exists('MANIFEST'):
         os.remove('MANIFEST')
 

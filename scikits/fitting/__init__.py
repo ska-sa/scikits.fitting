@@ -82,20 +82,20 @@ Helper functions
 
 import warnings
 
-from generic import *
-from utils import *
-from delaunay import *
-from gaussian import *
-from linlstsq import *
-from nonlinlstsq import *
-from poly import *
-from rbf import *
-from spline import *
+from generic import *  # noqa: F403 (simplifies API export)
+from utils import *  # noqa: F403
+from delaunay import *  # noqa: F403
+from gaussian import *  # noqa: F403
+from linlstsq import *  # noqa: F403
+from nonlinlstsq import *  # noqa: F403
+from poly import *  # noqa: F403
+from rbf import *  # noqa: F403
+from spline import *  # noqa: F403
 
 
 def _setup_test():
     """Create test() method that will run unit tests via nose."""
-    args = ['', '--exe', '-w', __path__[0]]
+    args = ['', '--exe', '-w', __path__[0]]  # noqa: F405 (__path__ is special)
     try:
         import nose as _nose
     except ImportError:
