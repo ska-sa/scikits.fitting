@@ -1,2 +1,2 @@
-include README.rst LICENSE.txt MANIFEST.in
+include README.rst NEWS.rst LICENSE.txt MANIFEST.in
 recursive-include scikits/fitting/tests *.py
