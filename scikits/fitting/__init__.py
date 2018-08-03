@@ -79,18 +79,19 @@ Helper functions
                       residuals
 
 """
+from __future__ import absolute_import
 
 import warnings
 
-from generic import *  # noqa: F403 (simplifies API export)
-from utils import *  # noqa: F403
-from delaunay import *  # noqa: F403
-from gaussian import *  # noqa: F403
-from linlstsq import *  # noqa: F403
-from nonlinlstsq import *  # noqa: F403
-from poly import *  # noqa: F403
-from rbf import *  # noqa: F403
-from spline import *  # noqa: F403
+from .generic import *  # noqa: F403 (simplifies API export)
+from .utils import *  # noqa: F403
+from .delaunay import *  # noqa: F403
+from .gaussian import *  # noqa: F403
+from .linlstsq import *  # noqa: F403
+from .nonlinlstsq import *  # noqa: F403
+from .poly import *  # noqa: F403
+from .rbf import *  # noqa: F403
+from .spline import *  # noqa: F403
 
 
 def _setup_test():

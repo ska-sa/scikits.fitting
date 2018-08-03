@@ -23,7 +23,9 @@
 :license: Modified BSD
 
 """
+from __future__ import division
 
+from builtins import range
 import numpy as np
 from numpy.testing import TestCase, assert_equal, assert_almost_equal, run_module_suite
 

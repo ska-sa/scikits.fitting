@@ -21,6 +21,8 @@
 
 """
 
+from builtins import range
+from builtins import object
 import copy
 
 import numpy as np
@@ -222,7 +224,7 @@ class Independent1DFit(ScatterFit):
         self._interps = np.ndarray(interp_shape, dtype=type(self._interp))
         num_interps = np.array(interp_shape).prod()
         # Move specified axis to the end of list
-        new_axis_order = range(len(y.shape))
+        new_axis_order = list(range(len(y.shape)))
         new_axis_order.pop(self._axis)
         new_axis_order.append(self._axis)
         # Rearrange to form 2-D array of data and 1-D array of interpolators
@@ -264,6 +266,6 @@ class Independent1DFit(ScatterFit):
         for n in range(num_interps):
             flat_y[n] = flat_interps[n](x)
         # Create list of indices that will move specified axis from last place to correct location
-        new_axis_order = range(len(out_shape))
+        new_axis_order = list(range(len(out_shape)))
         new_axis_order.insert(self._axis, new_axis_order.pop())
         return y.transpose(new_axis_order)

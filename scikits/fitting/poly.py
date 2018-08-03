@@ -20,7 +20,9 @@
 :license: Modified BSD
 
 """
+from __future__ import division
 
+from builtins import range
 import numpy as np
 import scipy
 import scipy.interpolate
@@ -218,7 +220,7 @@ class Polynomial2DFit(ScatterFit):
         x_norm = (x - self._mean[:, np.newaxis]) / self._scale[:, np.newaxis]
         v1 = np.vander(x_norm[0], self.degrees[0] + 1)
         v2 = np.vander(x_norm[1], self.degrees[1] + 1).T
-        return np.vstack([v1[:, n][np.newaxis, :] * v2 for n in xrange(v1.shape[1])])
+        return np.vstack([v1[:, n][np.newaxis, :] * v2 for n in range(v1.shape[1])])
 
     def fit(self, x, y, std_y=1.0):
         """Fit polynomial to data.
@@ -481,11 +483,11 @@ class PiecewisePolynomial1DFit(ScatterFit):
             x_interval = np.convolve(np.diff(x), [1.0, 1.0], 'valid')
             y_deriv = y
         # Recursively calculate the n'th derivative of y, up to maximum order
-        for n in xrange(1, max_deriv):
+        for n in range(1, max_deriv):
             # The difference between (n-1)'th derivative of y at previous and next point, divided by interval
             y_deriv = np.convolve(np.diff(y_deriv), [1.0, 1.0], 'valid') / x_interval
             x_interval = x_interval[1:-1]
-            for m in xrange(len(y_deriv)):
+            for m in range(len(y_deriv)):
                 y_list[m + n].append(y_deriv[m])
         if len(x) == 1:
             # Constant interpolation to all new x values

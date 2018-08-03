@@ -20,7 +20,10 @@
 :license: Modified BSD
 
 """
+from __future__ import division
 
+from builtins import zip
+from builtins import range
 import numpy as np
 import scipy.interpolate
 
@@ -228,7 +231,7 @@ class Spline2DScatterFit(ScatterFit):
         if self._interp is None:
             raise NotFittedError("Spline not fitted to data yet - first call .fit method")
         # Loop over individual data points, as underlying bispev routine expects regular grid in x
-        return np.array([self._interp(x[0, n], x[1, n]) for n in xrange(x.shape[1])]).squeeze()
+        return np.array([self._interp(x[0, n], x[1, n]) for n in range(x.shape[1])]).squeeze()
 
 # ----------------------------------------------------------------------------------------------------------------------
 # --- CLASS :  Spline2DGridFit
@@ -326,7 +329,7 @@ class Spline2DGridFit(GridFit):
             # Create list of interpolators, one per value in y, by setting each y value to 1 in turn (and the rest 0)
             self._std_interps = []
             testz = np.zeros(zs.size)
-            for m in xrange(zs.size):
+            for m in range(zs.size):
                 testz[:] = 0.0
                 testz[m] = 1.0
                 interp = scipy.interpolate.RectBivariateSpline(xs, ys, testz.reshape(zs.shape), kx=self.degree[0],
