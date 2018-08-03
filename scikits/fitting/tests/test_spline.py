@@ -23,7 +23,9 @@
 :license: Modified BSD
 
 """
+from __future__ import division
 
+from builtins import range
 import numpy as np
 from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
@@ -117,7 +119,7 @@ class TestSpline2DGridFit(TestCase):
         testy, std_testy = interp(self.testx, full_output=True)
         # Estimate data uncertainty using Monte Carlo
         y_ensemble = []
-        for m in xrange(3000):
+        for m in range(3000):
             interp = Spline2DGridFit((3, 3))
             interp.fit(self.x, self.y + 0.1 * np.random.randn(*self.y.shape))
             y_ensemble.append(interp(self.testx))

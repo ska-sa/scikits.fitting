@@ -20,7 +20,9 @@
 :license: Modified BSD
 
 """
+from __future__ import division
 
+from builtins import range
 import copy
 
 import numpy as np

@@ -20,7 +20,9 @@
 :license: Modified BSD
 
 """
+from __future__ import division
 
+from builtins import range
 import copy
 
 import numpy as np
@@ -147,7 +149,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
                 # Produce Jacobian of residual - array with shape (D_y, P, N)
                 residual_jac = - self.func_jacobian(params, x) / std_y
                 # Squash every axis except second-last parameter axis together, to get (R, P) shape
-                flatten_axes = range(len(residual_jac.shape) - 2) + [len(residual_jac.shape) - 1]
+                flatten_axes = list(range(len(residual_jac.shape) - 2)) + [len(residual_jac.shape) - 1]
                 ravel_jac = squash(residual_jac, flatten_axes, move_to_start=True)
                 # Jacobian of residuals has shape (R, P)
                 return ravel_jac[:, self.enabled_params]

@@ -24,6 +24,7 @@
 
 """
 
+from builtins import range
 import numpy as np
 from numpy.testing import TestCase, assert_array_equal, assert_almost_equal, run_module_suite
 
