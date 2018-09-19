@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Utility functions.
 
@@ -41,8 +41,8 @@ def squash(x, flatten_axes, move_to_start=True):
     so that the axes with indices listed in *flatten_axes* are collected either
     at the start or end of the array (based on the *move_to_start* flag). These
     axes are also flattened to a single axis, while preserving the total number
-    of elements in the array. The reshaping and transposition usually results in
-    a view of the original array, although a copy may result e.g. if
+    of elements in the array. The reshaping and transposition usually results
+    in a view of the original array, although a copy may result e.g. if
     discontiguous *flatten_axes* are chosen. The two extreme cases are
     ``flatten_axes = []`` or None, which results in the original array with no
     flattening, and ``flatten_axes = range(len(x.shape))``, which is equivalent
@@ -55,7 +55,7 @@ def squash(x, flatten_axes, move_to_start=True):
     flatten_axes : list of ints
         List of axes along which *x* should be flattened
     move_to_start : bool, optional
-        Flag indicating whether flattened axis is moved to start or end of array
+        Flag indicating whether flattened axis is moved to start / end of array
 
     Returns
     -------
@@ -84,22 +84,28 @@ def squash(x, flatten_axes, move_to_start=True):
     """
     x = np.asarray(x)
     x_shape = np.atleast_1d(np.asarray(x.shape))
-    # Split list of axes into those that will be flattened and the rest, which are considered the main axes
+    # Split list of axes into those that will be flattened and the rest,
+    # which are considered the main axes
     flatten_axes = np.atleast_1d(np.asarray(flatten_axes)).tolist()
     if flatten_axes == [None]:
         flatten_axes = []
     main_axes = list(set(range(len(x_shape))) - set(flatten_axes))
-    # After flattening, the array will contain `flatten_shape` number of `main_shape`-shaped subarrays
+    # After flattening, the array will contain `flatten_shape` number of
+    # `main_shape`-shaped subarrays
     flatten_shape = [x_shape[flatten_axes].prod()]
-    # Don't add any singleton dimensions during flattening - rather leave the matrix as is
+    # Don't add any singleton dimensions during flattening - rather leave
+    # the matrix as is
     if flatten_shape == [1]:
         flatten_shape = []
     main_shape = x_shape[main_axes].tolist()
-    # Move specified axes to the beginning (or end) of list of axes, and transpose and reshape array accordingly
+    # Move specified axes to the beginning (or end) of list of axes,
+    # and transpose and reshape array accordingly
     if move_to_start:
-        return x.transpose(flatten_axes + main_axes).reshape(flatten_shape + main_shape)
+        return x.transpose(
+            flatten_axes + main_axes).reshape(flatten_shape + main_shape)
     else:
-        return x.transpose(main_axes + flatten_axes).reshape(main_shape + flatten_shape)
+        return x.transpose(
+            main_axes + flatten_axes).reshape(main_shape + flatten_shape)
 
 
 def unsquash(x, flatten_axes, original_shape, move_from_start=True):
@@ -114,7 +120,7 @@ def unsquash(x, flatten_axes, original_shape, move_from_start=True):
     original_shape : List of ints
         Original shape of *x*, before flattening
     move_from_start : bool, optional
-        Flag indicating whether flattened axes were moved to start or end of array
+        Flag indicating whether flattened axes were moved to array start / end
 
     Returns
     -------
@@ -124,22 +130,28 @@ def unsquash(x, flatten_axes, original_shape, move_from_start=True):
     """
     x = np.asarray(x)
     original_shape = np.atleast_1d(np.asarray(original_shape))
-    # Split list of axes into those that will be flattened and the rest, which are considered the main axes
+    # Split list of axes into those that will be flattened and the rest,
+    # which are considered the main axes
     flatten_axes = np.atleast_1d(np.asarray(flatten_axes)).tolist()
     if flatten_axes == [None]:
         flatten_axes = []
     main_axes = list(set(range(len(original_shape))) - set(flatten_axes))
-    # After unflattening, the flatten_axes will be reconstructed with the correct dimensionality
+    # After unflattening, the flatten_axes will be reconstructed with
+    # the correct dimensionality
     unflatten_shape = original_shape[flatten_axes].tolist()
-    # Don't add any singleton dimensions during flattening - rather leave the matrix as is
+    # Don't add any singleton dimensions during flattening - rather
+    # leave the matrix as is
     if unflatten_shape == [1]:
         unflatten_shape = []
     main_shape = original_shape[main_axes].tolist()
-    # Move specified axes from the beginning (or end) of list of axes, and transpose and reshape array accordingly
+    # Move specified axes from the beginning (or end) of list of axes,
+    # and transpose and reshape array accordingly
     if move_from_start:
-        return x.reshape(unflatten_shape + main_shape).transpose(np.array(flatten_axes + main_axes).argsort())
+        return x.reshape(unflatten_shape + main_shape).transpose(
+            np.array(flatten_axes + main_axes).argsort())
     else:
-        return x.reshape(main_shape + unflatten_shape).transpose(np.array(main_axes + flatten_axes).argsort())
+        return x.reshape(main_shape + unflatten_shape).transpose(
+            np.array(main_axes + flatten_axes).argsort())
 
 
 def scalar(x):
@@ -166,7 +178,7 @@ def scalar(x):
 
     """
     squeezed_x = np.squeeze(x)
-    assert np.shape(squeezed_x) == (), "Expected array %s to be a scalar" % (x,)
+    assert np.shape(squeezed_x) == (), "Expected array %s to be scalar" % (x,)
     return np.atleast_1d(squeezed_x)[0]
 
 
@@ -189,7 +201,7 @@ def sort_grid(x, y, z):
     yy : array, shape (N,)
         1-D array of y coordinates, in ascending order
     zz : array, shape (M, N)
-        2-D array of values which correspond to the coordinates in *xx* and *yy*
+        2-D array of values which correspond to coordinates in *xx* and *yy*
 
     """
     x_ind = np.argsort(x)
@@ -234,7 +246,7 @@ def vectorize_fit_func(func):
     Parameters
     ----------
     func : function, signature ``y = f(p, x)``
-        Function ``f(p, x)`` to be vectorised along last dimension of input ``x``
+        Function ``f(p, x)`` to be vectorised along last dimension of ``x``
 
     Returns
     -------
@@ -302,9 +314,11 @@ def randomise(interp, x, y, method='shuffle'):
     if method == 'shuffle':
         np.random.shuffle(residuals.ravel())
     elif method == 'normal':
-        residuals = residuals.std() * np.random.standard_normal(residuals.shape)
+        residuals = residuals.std() * np.random.standard_normal(
+            residuals.shape)
     elif method == 'bootstrap':
-        residuals = residuals.ravel()[np.random.randint(residuals.size, size=residuals.size)].reshape(residuals.shape)
+        sample = np.random.randint(residuals.size, size=residuals.size)
+        residuals = residuals.ravel()[sample].reshape(residuals.shape)
     # Refit function on pseudo-data
     random_interp.fit(x, fitted_y + residuals)
     return random_interp
@@ -354,7 +368,8 @@ def pascal(n):
     """
     # Create special superdiagonal matrix X
     x = np.diag(np.arange(1., n), 1)
-    # Evaluate matrix exponential Un = exp(X) via direct series expansion, since X is nilpotent
+    # Evaluate matrix exponential Un = exp(X) via direct series expansion,
+    # since X is nilpotent
     # That is, Un = I + X + X^2 / 2! + X^3 / 3! + ... + X^(n-1) / (n-1)!
     term = x[:]
     # The first two terms [I + X] are trivial
@@ -363,7 +378,8 @@ def pascal(n):
     for k in range(2, n - 1):
         term = np.dot(term, x) / k
         u += term
-    # The last term [X^(n-1) / (n-1)!] is also trivial - a zero matrix with a single one in the top right corner
+    # The last term [X^(n-1) / (n-1)!] is also trivial - a zero matrix
+    # with a single one in the top right corner
     u[0, -1] = 1.
     return u
 

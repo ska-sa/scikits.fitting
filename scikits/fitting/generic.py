@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Generic fitters and base classes.
 
@@ -33,8 +33,7 @@ import numpy as np
 
 
 class NotFittedError(Exception):
-    """Error: Fitter was called with new data before being fit to existing data."""
-    pass
+    """Fitter was called with new data before being fit to existing data."""
 
 # ----------------------------------------------------------------------------------------------------------------------
 # --- INTERFACE :  ScatterFit
@@ -62,15 +61,16 @@ class ScatterFit(object):
     def fit(self, x, y):
         """Fit function ``y = f(x)`` to data.
 
-        This function should reset any state associated with previous ``(x, y)``
-        data fits, and preserve all state that was set by the initialiser.
+        This function should reset any state associated with previous
+        ``(x, y)`` data fits, and preserve all state that was set by the
+        initialiser.
 
         Parameters
         ----------
         x : array-like, shape (N,) for 1-D data, or (D, N) otherwise
-            Known input values as sequence or numpy array (order does not matter)
+            Known input values as sequence or ndarray (order does not matter)
         y : array-like, shape (N,)
-            Known output values as sequence or numpy array
+            Known output values as sequence or ndarray
 
         Returns
         -------
@@ -86,7 +86,7 @@ class ScatterFit(object):
         Parameters
         ----------
         x : array-like, shape (M,) for 1-D data, or (D, M) otherwise
-            Input to function as sequence or numpy array (order does not matter)
+            Input to function as sequence or ndarray (order does not matter)
 
         Returns
         -------
@@ -97,7 +97,7 @@ class ScatterFit(object):
         raise NotImplementedError
 
     def eval(self, x):
-        """Evaluate function on new data. See __call__ docstring for more help."""
+        """Evaluate function on new data. See __call__ docstring for help."""
         return self.__call__(x)
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -126,8 +126,9 @@ class GridFit(object):
     def fit(self, x, y):
         """Fit function ``y = f(x)`` to data.
 
-        This function should reset any state associated with previous ``(x, y)``
-        data fits, and preserve all state that was set by the initialiser.
+        This function should reset any state associated with previous
+        ``(x, y)`` data fits, and preserve all state that was set by the
+        initialiser.
 
         Parameters
         ----------
@@ -163,7 +164,7 @@ class GridFit(object):
         raise NotImplementedError
 
     def eval(self, x):
-        """Evaluate function on new data. See __call__ docstring for more help."""
+        """Evaluate function on new data. See __call__ docstring for help."""
         return self.__call__(x)
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -185,7 +186,7 @@ class Independent1DFit(ScatterFit):
     interp : object
         ScatterFit object to be cloned into an array of interpolators
     axis : int
-        Axis of ``y`` matrix which will vary with the independent ``x`` variable
+        Axis of ``y`` matrix which will vary with independent ``x`` variable
 
     """
     def __init__(self, interp, axis):
@@ -214,10 +215,13 @@ class Independent1DFit(ScatterFit):
         x = np.atleast_1d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
         if self._axis >= len(y.shape):
-            raise ValueError("Provided y-array does not have the specified axis %d" % (self._axis,))
+            raise ValueError("Provided y-array does not have the "
+                             "specified axis %d" % (self._axis,))
         if y.shape[self._axis] != len(x):
-            raise ValueError("Number of elements in x and along specified axis of y differ")
-        # Shape of array of interpolators (same shape as y, but without 'independent' specified axis)
+            raise ValueError("Number of elements in x and along "
+                             "specified axis of y differ")
+        # Shape of array of interpolators
+        # (same shape as y, but without 'independent' specified axis)
         interp_shape = list(y.shape)
         interp_shape.pop(self._axis)
         # Create blank array of interpolators
@@ -230,7 +234,8 @@ class Independent1DFit(ScatterFit):
         # Rearrange to form 2-D array of data and 1-D array of interpolators
         flat_y = y.transpose(new_axis_order).reshape(num_interps, len(x))
         flat_interps = self._interps.ravel()
-        # Clone basic interpolator and fit x and each row of the flattened y matrix independently
+        # Clone basic interpolator and fit x and each row
+        # of the flattened y matrix independently
         for n in range(num_interps):
             flat_interps[n] = copy.deepcopy(self._interp)
             flat_interps[n].fit(x, flat_y[n])
@@ -251,21 +256,24 @@ class Independent1DFit(ScatterFit):
 
         """
         if self._interps is None:
-            raise NotFittedError("Interpolator functions not fitted to data yet - first call .fit method")
+            raise NotFittedError("Interpolator functions not fitted to data "
+                                 "yet - first call .fit method")
         x = np.atleast_1d(np.asarray(x))
-        # Create blank output array with specified axis appended at the end of shape
+        # Create blank output array with specified axis appended at shape end
         out_shape = list(self._interps.shape)
         out_shape.append(len(x))
         y = np.ndarray(out_shape)
         num_interps = np.array(self._interps.shape).prod()
         # Rearrange to form 2-D array of data and 1-D array of interpolators
         flat_y = y.reshape(num_interps, len(x))
-        assert flat_y.base is y, "Reshaping array resulted in a copy instead of a view - bad news for this code..."
+        assert flat_y.base is y, ("Reshaping array resulted in a copy instead "
+                                  "of a view - bad news for this code...")
         flat_interps = self._interps.ravel()
         # Apply each interpolator to x and store in appropriate row of y
         for n in range(num_interps):
             flat_y[n] = flat_interps[n](x)
-        # Create list of indices that will move specified axis from last place to correct location
+        # Create list of indices that will move specified axis
+        # from last place to correct location
         new_axis_order = list(range(len(out_shape)))
         new_axis_order.insert(self._axis, new_axis_order.pop())
         return y.transpose(new_axis_order)

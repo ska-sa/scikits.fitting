@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -15,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Tests for generic fitters.
 
@@ -49,7 +46,7 @@ class TestIndependent1DFit(TestCase):
         self.y[1, :, 2] = np.polyval(self.poly2, self.x)
 
     def test_fit_eval(self):
-        """Independent1DFit: Basic function fitting and evaluation using data from a known function."""
+        """Independent1DFit: Basic function fitting and evaluation."""
         interp = Independent1DFit(Polynomial1DFit(2), self.axis)
         self.assertRaises(NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.x, self.y_too_low_dim)
@@ -65,6 +62,7 @@ class TestIndependent1DFit(TestCase):
         assert_almost_equal(interp._interps[1, 1].poly, self.poly1, decimal=10)
         assert_almost_equal(interp._interps[1, 2].poly, self.poly2, decimal=10)
         assert_almost_equal(y, self.y, decimal=10)
+
 
 if __name__ == "__main__":
     run_module_suite()

@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -15,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Tests for non-linear least-squares fitter.
 
@@ -28,7 +25,8 @@ from __future__ import division
 import numpy as np
 from numpy.testing import TestCase, assert_almost_equal, run_module_suite
 
-from scikits.fitting import NonLinearLeastSquaresFit, LinearLeastSquaresFit, vectorize_fit_func
+from scikits.fitting import (NonLinearLeastSquaresFit, LinearLeastSquaresFit,
+                             vectorize_fit_func)
 
 
 class TestNonLinearLeastSquaresFit(TestCase):
@@ -63,7 +61,7 @@ class TestNonLinearLeastSquaresFit(TestCase):
         self.y3 = self.func3(self.true_params3, self.x3)
 
     def test_fit_eval_func1(self):
-        """NonLinearLeastSquaresFit: Basic function fitting and evaluation using data from a known function."""
+        """NonLinearLeastSquaresFit: Basic function fitting and evaluation."""
         interp = NonLinearLeastSquaresFit(self.vFunc, self.init_params)
         interp.fit(self.x, self.y)
         y = interp(self.x)
@@ -71,7 +69,7 @@ class TestNonLinearLeastSquaresFit(TestCase):
         assert_almost_equal(y, self.y, decimal=5)
 
     def test_fit_eval_gauss(self):
-        """NonLinearLeastSquaresFit: Check fit on a 2-D log Gaussian function."""
+        """NonLinearLeastSquaresFit: Check fit on 2-D log Gaussian function."""
         interp2 = NonLinearLeastSquaresFit(self.func2, self.init_params2)
         interp2.fit(self.x2, self.y2)
         y2 = interp2(self.x2)
@@ -79,10 +77,11 @@ class TestNonLinearLeastSquaresFit(TestCase):
         assert_almost_equal(y2, self.y2, decimal=10)
 
     def test_fit_eval_linear(self):
-        """NonLinearLeastSquaresFit: Compare to LinearLeastSquaresFit on a linear problem and check use of Jacobian."""
+        """NonLinearLeastSquaresFit: Do linear problem and check Jacobian."""
         lin = LinearLeastSquaresFit()
         lin.fit(self.x3, self.y3, std_y=2.0)
-        nonlin = NonLinearLeastSquaresFit(self.func3, self.init_params3, func_jacobian=self.jac3)
+        nonlin = NonLinearLeastSquaresFit(self.func3, self.init_params3,
+                                          func_jacobian=self.jac3)
         nonlin.fit(self.x3, self.y3, std_y=2.0)
         # A correct Jacobian helps a lot...
         assert_almost_equal(nonlin.params, self.true_params3, decimal=11)
@@ -93,19 +92,24 @@ class TestNonLinearLeastSquaresFit(TestCase):
         # Covariance matrix is way smaller than linear one...
 
     def test_enabled_params(self):
-        """NonLinearLeastSquaresFit: Check whether subset of parameters can be optimised."""
+        """NonLinearLeastSquaresFit: Try to optimise subset of parameters."""
         lin = LinearLeastSquaresFit()
         lin.fit(self.x3[self.enabled_params_int, :], self.y3, std_y=2.0)
-        lin_cov_params = np.zeros((len(self.true_params3), len(self.true_params3)))
-        lin_cov_params[np.ix_(self.enabled_params_int, self.enabled_params_int)] = lin.cov_params
-        nonlin = NonLinearLeastSquaresFit(self.func3, self.init_params3, self.enabled_params_int, self.jac3)
+        lin_cov_params = np.zeros((len(self.true_params3),
+                                   len(self.true_params3)))
+        subset = np.ix_(self.enabled_params_int, self.enabled_params_int)
+        lin_cov_params[subset] = lin.cov_params
+        nonlin = NonLinearLeastSquaresFit(self.func3, self.init_params3,
+                                          self.enabled_params_int, self.jac3)
         nonlin.fit(self.x3, self.y3, std_y=2.0)
         assert_almost_equal(nonlin.params, self.true_params3, decimal=11)
         assert_almost_equal(nonlin.cov_params, lin_cov_params, decimal=11)
-        nonlin = NonLinearLeastSquaresFit(self.func3, self.init_params3, self.enabled_params_bool, self.jac3)
+        nonlin = NonLinearLeastSquaresFit(self.func3, self.init_params3,
+                                          self.enabled_params_bool, self.jac3)
         nonlin.fit(self.x3, self.y3, std_y=2.0)
         assert_almost_equal(nonlin.params, self.true_params3, decimal=11)
         assert_almost_equal(nonlin.cov_params, lin_cov_params, decimal=11)
+
 
 if __name__ == "__main__":
     run_module_suite()

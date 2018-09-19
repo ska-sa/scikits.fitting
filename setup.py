@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -14,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 import os
 
@@ -47,6 +47,7 @@ def configuration(parent_package='', top_path=None):
     config.add_data_dir('scikits/fitting/tests')
 
     return config
+
 
 here = os.path.abspath(os.path.dirname(__file__))
 readme = open(os.path.join(here, 'README.rst')).read()

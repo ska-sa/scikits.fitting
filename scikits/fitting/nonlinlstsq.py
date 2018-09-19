@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Non-linear least-squares fitter.
 
@@ -37,7 +37,7 @@ from .utils import squash
 
 
 class NonLinearLeastSquaresFit(ScatterFit):
-    """Fit a generic function to data, based on non-linear least squares optimisation.
+    """Fit generic function to data based on non-linear least squares optimisation.
 
     This fits a function of the form ``y = f(p, x)`` to x-y data, by finding a
     a least-squares estimate for the parameter vector ``p``. The function takes
@@ -50,19 +50,19 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
     The function ``f(p, x)`` should be able to operate on sequences of ``x``
     arrays (i.e. should be vectorised). That is, it should accept ``x`` arrays
-    of shape (D_x, N) to produce ``y`` arrays of shape (D_y, N). This is the way
-    in which x-y data is presented to the :meth:`fit` method. Note that the
-    array sequence is concatenated along the *last* dimension (i.e. as columns).
-    If it cannot, use the helper function :func:`vectorize_fit_func` to wrap the
-    function before passing it to this class.
+    of shape (D_x, N) to produce ``y`` arrays of shape (D_y, N). This is the
+    way in which x-y data is presented to the :meth:`fit` method. Note that the
+    array sequence is concatenated along the *last* dimension (i.e. as
+    columns). If it cannot, use the helper function :func:`vectorize_fit_func`
+    to wrap the function before passing it to this class.
 
     If available, the Jacobian of the function, ``J = g(p, x)``, should return
     an array ``J`` of shape (D_y, P), where ``P = len(p)`` is the number of
     function parameters. Each element of this array indicates the derivative of
     the ``i``'th output value with respect to the ``j``'th parameter, evaluated
     at the given ``p`` and ``x``. This function should also be vectorised,
-    similar to ``f``, so that an input ``x`` array of shape (D_x, N) produces an
-    output ``J`` array of shape (D_y, P, N).
+    similar to ``f``, so that an input ``x`` array of shape (D_x, N) produces
+    an output ``J`` array of shape (D_y, P, N).
 
     Parameters
     ----------
@@ -94,27 +94,31 @@ class NonLinearLeastSquaresFit(ScatterFit):
     optimal parameter vector using modified Levenberg-Marquardt optimisation.
 
     """
-    def __init__(self, func, initial_params, enabled_params=None, func_jacobian=None, **kwargs):
+    def __init__(self, func, initial_params, enabled_params=None,
+                 func_jacobian=None, **kwargs):
         ScatterFit.__init__(self)
         self.func = func
-        # Preserve this for repeatability of fits (also ensure it is floating-point to please residuals() function)
+        # Preserve this for repeatability of fits
+        # (also ensure it is floating-point to please residuals() function)
         self.initial_params = np.asarray(initial_params).astype(np.float)
         self.func_jacobian = func_jacobian
         # Extra keyword arguments to optimiser
         self._extra_args = kwargs
         self.params = self.initial_params
-        self.enabled_params = np.asarray(enabled_params if enabled_params is not None else [True] * len(self.params))
+        self.enabled_params = np.asarray(
+            enabled_params if enabled_params is not None else
+            [True] * len(self.params))
         self.cov_params = None
 
     def fit(self, x, y, std_y=1.0):
         """Fit function to data, using non-linear least-squares optimisation.
 
-        This determines the optimal parameter vector ``p*`` so that the function
-        ``y = f(p, x)`` best fits the observed x-y data, in a least-squares
-        sense. The x-y data is a sequence of N ``x`` arrays of shape D_x and
-        a sequence of N corresponding ``y`` arrays of shape D_y. These sequences
-        are concatenated along the *last* dimension (i.e. as columns) to form
-        the *x* and *y* arrays.
+        This determines the optimal parameter vector ``p*`` so that the
+        function ``y = f(p, x)`` best fits the observed x-y data, in a
+        least-squares sense. The x-y data is a sequence of N ``x`` arrays of
+        shape D_x and a sequence of N corresponding ``y`` arrays of shape D_y.
+        These sequences are concatenated along the *last* dimension (i.e. as
+        columns) to form the *x* and *y* arrays.
 
         Parameters
         ----------
@@ -123,8 +127,8 @@ class NonLinearLeastSquaresFit(ScatterFit):
         y : array-like, shape (D_y, N)
             Sequence of output values as columns of a numpy array
         std_y : float or array-like, shape (D_y, N), optional
-            Measurement error or uncertainty of `y` values, expressed as standard
-            deviation in units of `y`
+            Measurement error or uncertainty of `y` values, expressed as
+            standard deviation in units of `y`
 
         Returns
         -------
@@ -133,31 +137,40 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
         """
         x, y = np.asarray(x), np.asarray(y)
-        # Initialise full set of parameters (subset to be optimised will be inserted into this array before use)
+        # Initialise full set of parameters
+        # (subset to be optimised will be inserted into this array before use)
         params = self.initial_params[:]
 
-        # Calculate R = prod(D_y) * N weighted residuals (leastsq will minimise sum(residuals ** 2))
+        # Calculate R = prod(D_y) * N weighted residuals
+        # (leastsq will minimise sum(residuals ** 2))
         def residuals(p):
             params[self.enabled_params] = p
             r = (y - self.func(params, x)) / std_y
             return r.ravel()
         # Register Jacobian function if applicable
         if self.func_jacobian is not None:
-            # Jacobian (R, P) matrix of function at given p and x values (derivatives along rows)
+            # Jacobian (R, P) matrix of function at given p and x values
+            # (derivatives along rows)
             def jacobian(p):
                 params[self.enabled_params] = p
                 # Produce Jacobian of residual - array with shape (D_y, P, N)
                 residual_jac = - self.func_jacobian(params, x) / std_y
-                # Squash every axis except second-last parameter axis together, to get (R, P) shape
-                flatten_axes = list(range(len(residual_jac.shape) - 2)) + [len(residual_jac.shape) - 1]
-                ravel_jac = squash(residual_jac, flatten_axes, move_to_start=True)
+                # Squash every axis except second-last parameter axis together,
+                # to get (R, P) shape
+                flatten_axes = list(range(len(residual_jac.shape) - 2)) + [
+                    len(residual_jac.shape) - 1]
+                ravel_jac = squash(residual_jac, flatten_axes,
+                                   move_to_start=True)
                 # Jacobian of residuals has shape (R, P)
                 return ravel_jac[:, self.enabled_params]
             self._extra_args['Dfun'] = jacobian
-        # Optimise, starting from copy of same initial parameter vector for each call of fit (x0 used to be clobbered)
-        p, cov_p, infodict, mesg, ier = scipy.optimize.leastsq(residuals, self.initial_params[self.enabled_params],
-                                                               full_output=1, **self._extra_args)
-        # Try to salvage a singular precision matrix by using the pseudo-inverse in this case
+        # Optimise, starting from copy of same initial parameter vector
+        # for each call of fit (x0 used to be clobbered)
+        p, cov_p, infodict, mesg, ier = scipy.optimize.leastsq(
+            residuals, self.initial_params[self.enabled_params], full_output=1,
+            **self._extra_args)
+        # Try to salvage a singular precision matrix by using
+        # the pseudo-inverse in this case
         if cov_p is None:
             # The calculation of cov_p is lifted from scipy.optimize.leastsq
             ipvt, fjac = infodict['ipvt'], infodict['fjac']
@@ -167,8 +180,10 @@ class NonLinearLeastSquaresFit(ScatterFit):
             try:
                 cov_p = np.linalg.pinv(precision_mat, rcond)
             except np.linalg.LinAlgError:
-                # The standard SVD in NumPy is based on Lapack DGESDD, which is fast but occasionally struggles on
-                # pathological matrices, resulting in a LinAlgError (see NumPy ticket #990) - then all bets are off
+                # The standard SVD in NumPy is based on Lapack DGESDD, which is
+                # fast but occasionally struggles on pathological matrices,
+                # resulting in a LinAlgError (see NumPy ticket #990) - then
+                # all bets are off
                 cov_p = np.zeros(precision_mat.shape)
             max_var = np.diag(cov_p).max()
             bad_variances = np.diag(cov_p) <= rcond * max_var
@@ -177,7 +192,8 @@ class NonLinearLeastSquaresFit(ScatterFit):
         params[self.enabled_params] = p
         self.params = params
         self.cov_params = np.zeros((len(params), len(params)))
-        self.cov_params[np.ix_(self.enabled_params, self.enabled_params)] = cov_p
+        subset = np.ix_(self.enabled_params, self.enabled_params)
+        self.cov_params[subset] = cov_p
         return self
 
     def __call__(self, x):
@@ -200,8 +216,9 @@ class NonLinearLeastSquaresFit(ScatterFit):
 
     def __copy__(self):
         """Shallow copy operation."""
-        return NonLinearLeastSquaresFit(self.func, self.params, self.enabled_params, self.func_jacobian,
-                                        **self._extra_args)
+        return NonLinearLeastSquaresFit(
+            self.func, self.params, self.enabled_params, self.func_jacobian,
+            **self._extra_args)
 
     def __deepcopy__(self, memo):
         """Deep copy operation.
@@ -215,6 +232,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
             Dictionary that caches objects that are already copied
 
         """
-        return NonLinearLeastSquaresFit(self.func, copy.deepcopy(self.params, memo),
-                                        copy.deepcopy(self.enabled_params, memo), self.func_jacobian,
-                                        **(copy.deepcopy(self._extra_args, memo)))
+        return NonLinearLeastSquaresFit(
+            self.func, copy.deepcopy(self.params, memo),
+            copy.deepcopy(self.enabled_params, memo), self.func_jacobian,
+            **(copy.deepcopy(self._extra_args, memo)))

@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """RBF fitter.
 
@@ -32,7 +32,7 @@ from .generic import ScatterFit, NotFittedError
 
 
 class RbfScatterFit(ScatterFit):
-    """Do radial basis function (RBF) interpolation of scattered multi-dimensional data.
+    """Do radial basis function (RBF) interpolation of scattered multi-dim data.
 
     This uses the :class:`scipy.interpolate.Rbf` class. The D-dimensional ``x``
     coordinates do not have to lie on a regular grid, and can be in any order.
@@ -72,11 +72,14 @@ class RbfScatterFit(ScatterFit):
         # Check dimensions of known data
         x = np.atleast_2d(np.asarray(x))
         y = np.atleast_1d(np.asarray(y))
-        if (len(x.shape) != 2) or (len(y.shape) != 1) or (y.shape[0] != x.shape[1]):
-            raise ValueError("RBF interpolator requires input data with shape (D, N) " +
-                             "and output data with shape (N,), got %s and %s instead" % (x.shape, y.shape))
+        if ((len(x.shape) != 2) or
+           (len(y.shape) != 1) or (y.shape[0] != x.shape[1])):
+            raise ValueError("RBF interpolator requires input data with "
+                             "shape (D, N) and output data with shape (N,), "
+                             "got %s and %s instead" % (x.shape, y.shape))
         # RBF interpolator available since scipy 0.7.0
-        self._interp = scipy.interpolate.Rbf(*np.vstack((x, y)), **self._extra_args)
+        self._interp = scipy.interpolate.Rbf(
+            *np.vstack((x, y)), **self._extra_args)
         return self
 
     def __call__(self, x):
@@ -96,7 +99,9 @@ class RbfScatterFit(ScatterFit):
         # Check dimensions
         x = np.atleast_2d(np.asarray(x))
         if (len(x.shape) != 2):
-            raise ValueError("RBF interpolator requires input data with shape (D, M), got %s instead" % (x.shape,))
+            raise ValueError("RBF interpolator requires input data with "
+                             "shape (D, M), got %s instead" % (x.shape,))
         if self._interp is None:
-            raise NotFittedError("RBF not fitted to data yet - first call .fit method")
+            raise NotFittedError("RBF not fitted to data yet - "
+                                 "first call .fit method")
         return self._interp(*x)

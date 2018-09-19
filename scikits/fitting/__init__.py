@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -12,14 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Unified interface to SciPy function fitting routines.
 
-This module provides a unified interface to the fitting of functions to data with
-SciPy. All fitting routines conform to the following simple method interface:
+This module provides a unified interface to the fitting of functions to data
+with SciPy. All fitting routines conform to the following simple method
+interface:
 
-- __init__(p) : set parameters of interpolation function, e.g. polynomial degree
+- __init__(p) : set parameters of interpolation function e.g. polynomial degree
 - fit(x, y) : fit given input-output data
 - __call__(x) / eval(x) : evaluate function on new input data
 
@@ -28,12 +29,12 @@ grid fitting. They share the same interface, only differing in the definition
 of input data x.
 
 Scatter-fitters operate on unstructured scattered input data (i.e. not on a
-grid). The input data consists of a sequence of ``x`` coordinates and a sequence
-of corresponding ``y`` data, where the order of the ``x`` coordinates does not
-matter and their location can be arbitrary. The ``x`` coordinates can have an
-arbritrary dimension (although most classes are specialised for 1-D or 2-D
-data). If the dimension is bigger than 1, the coordinates are provided as an
-array of column vectors. These fitters have ScatterFit as base class.
+grid). The input data consists of a sequence of ``x`` coordinates and a
+sequence of corresponding ``y`` data, where the order of the ``x`` coordinates
+does not matter and their location can be arbitrary. The ``x`` coordinates can
+have an arbritrary dimension (although most classes are specialised for 1-D or
+2-D data). If the dimension is bigger than 1, the coordinates are provided as
+an array of column vectors. These fitters have ScatterFit as base class.
 
 Grid-fitters operate on input data that lie on a grid. The input data consists
 of a sequence of x-axis tick sequences and the corresponding array of y data.
@@ -45,13 +46,14 @@ Scatter fitters
 ---------------
 
 - :class:`ScatterFit` : Abstract base class for scatter fitters
-- :class:`LinearLeastSquaresFit` : Fit linear regression model to data using SVD
+- :class:`LinearLeastSquaresFit` : Fit linear regression model to data with SVD
 - :class:`Polynomial1DFit` : Fit polynomial to 1-D data
 - :class:`Polynomial2DFit` : Fit polynomial to 2-D data
 - :class:`PiecewisePolynomial1DFit` : Fit piecewise polynomial to 1-D data
 - :class:`Independent1DFit` : Interpolate N-dimensional matrix along given axis
-- :class:`Delaunay2DScatterFit` : Interpolate scalar function of 2-D data, based on
-                                  Delaunay triangulation (scattered data version)
+- :class:`Delaunay2DScatterFit` : Interpolate scalar function of 2-D data,
+                                  based on Delaunay triangulation
+                                  (scattered data version)
 - :class:`NonLinearLeastSquaresFit` : Fit a generic function to data, based on
                                       non-linear least squares optimisation.
 - :class:`GaussianFit` : Fit Gaussian curve to multi-dimensional data
@@ -68,7 +70,7 @@ Grid fitters
 Helper functions
 ----------------
 
-- :func:`squash` : Flatten array, but not necessarily all the way to a 1-D array
+- :func:`squash` : Flatten array, but not necessarily all the way to 1-D array
 - :func:`unsquash' : Restore an array that was reshaped by :func:`squash`
 - :func:`sort_grid` : Ensure that the coordinates of a rectangular grid are in
                       ascending order
@@ -106,4 +108,6 @@ def _setup_test():
     else:
         import functools
         return functools.partial(_nose.run, 'scikits.fitting', argv=args)
+
+
 test = _setup_test()

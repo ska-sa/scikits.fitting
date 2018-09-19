@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Gaussian fitter.
 
@@ -35,9 +35,9 @@ from .nonlinlstsq import NonLinearLeastSquaresFit
 class GaussianFit(ScatterFit):
     """Fit Gaussian curve to multi-dimensional data.
 
-    This fits a D-dimensional Gaussian function (with diagonal covariance matrix
-    or single scalar variance) to x-y data. Don't confuse this with fitting a
-    Gaussian probability density function (pdf) to random data!
+    This fits a D-dimensional Gaussian function (with diagonal covariance
+    matrix or single scalar variance) to x-y data. Don't confuse this with
+    fitting a Gaussian probability density function (pdf) to random data!
 
     Parameters
     ----------
@@ -82,10 +82,15 @@ class GaussianFit(ScatterFit):
     # pylint: disable-msg=W0612
     def __init__(self, mean, std, height):
         ScatterFit.__init__(self)
-        self.mean, self.std, self.height = np.atleast_1d(mean), np.atleast_1d(std), height
-        if (self.mean.ndim != 1) or (self.std.ndim != 1) or (self.std.shape not in [self.mean.shape, (1,)]):
-            raise ValueError("Dimensions of mean and/or standard deviation incorrect")
-        # Make sure a single standard devation is a plain scalar, and create parameter vector for optimisation
+        self.mean = np.atleast_1d(mean)
+        self.std = np.atleast_1d(std)
+        self.height = height
+        if ((self.mean.ndim != 1) or (self.std.ndim != 1) or
+           (self.std.shape not in [self.mean.shape, (1,)])):
+            raise ValueError("Dimensions of mean and/or "
+                             "standard deviation incorrect")
+        # Make sure a single standard devation is a plain scalar,
+        # and create parameter vector for optimisation
         if self.std.shape == (1,):
             self.std = self.std[0]
         params = np.r_[self.mean, self.height, self.std]
@@ -110,7 +115,8 @@ class GaussianFit(ScatterFit):
             p, x = np.atleast_1d(p), np.atleast_1d(x)
             D = x.shape[0]
             x_min_mu = x - p[:D, np.newaxis] if x.ndim > 1 else x - p[:D]
-            var = np.tile(p[D + 1] ** 2, D) if len(p) == D + 2 else p[D + 1:] ** 2
+            var = (np.tile(p[D + 1] ** 2, D)
+                   if len(p) == D + 2 else p[D + 1:] ** 2)
             return p[D] * np.exp(-0.5 * np.dot(1 / var, x_min_mu * x_min_mu))
 
         def jac_gauss_diagcov(p, x):
@@ -137,7 +143,8 @@ class GaussianFit(ScatterFit):
             D = x.shape[0]
             mu = p[:D, np.newaxis]
             # Ensure std is a D-dimensional vector
-            sigma = np.tile(p[D + 1], (D, 1)) if len(p) == D + 2 else p[D + 1:, np.newaxis]
+            sigma = (np.tile(p[D + 1], (D, 1))
+                     if len(p) == D + 2 else p[D + 1:, np.newaxis])
             norm_x = (x - mu) / sigma
             dy_dheight = np.exp(-0.5 * (norm_x * norm_x).sum(axis=0))
             y = p[D] * dy_dheight
@@ -147,7 +154,8 @@ class GaussianFit(ScatterFit):
             return np.vstack((dy_dmean, dy_dheight, dy_dstd))
 
         # Internal non-linear least squares fitter
-        self._interp = NonLinearLeastSquaresFit(gauss_diagcov, params, func_jacobian=jac_gauss_diagcov)
+        self._interp = NonLinearLeastSquaresFit(
+            gauss_diagcov, params, func_jacobian=jac_gauss_diagcov)
         self.std_mean = self.std_std = self.std_height = None
 
     def fit(self, x, y, std_y=1.0):
@@ -163,8 +171,8 @@ class GaussianFit(ScatterFit):
         y : array-like, shape (N,)
             Sequence of 1-D output values as a numpy array
         std_y : float or array-like, shape (N,), optional
-            Measurement error or uncertainty of `y` values, expressed as standard
-            deviation in units of `y`
+            Measurement error or uncertainty of `y` values, expressed as
+            standard deviation in units of `y`
 
         Returns
         -------
@@ -177,13 +185,17 @@ class GaussianFit(ScatterFit):
         D = len(self.mean)
         self.mean = self._interp.params[:D]
         self.height = self._interp.params[D]
-        self.std = self._interp.params[D + 1] if len(self._interp.params) == D + 2 else self._interp.params[D + 1:]
-        # Since standard deviations only appear in squared form in cost function, they have a sign ambiguity
+        self.std = (self._interp.params[D + 1]
+                    if len(self._interp.params) == D + 2
+                    else self._interp.params[D + 1:])
+        # Since standard deviations only appear in squared form
+        # in cost function, they have a sign ambiguity
         self.std = np.abs(self.std)
         std_params = np.sqrt(np.diag(self._interp.cov_params))
         self.std_mean = std_params[:D]
         self.std_height = std_params[D]
-        self.std_std = std_params[D + 1] if len(self._interp.params) == D + 2 else std_params[D + 1:]
+        self.std_std = (std_params[D + 1] if len(self._interp.params) == D + 2
+                        else std_params[D + 1:])
         return self
 
     def __call__(self, x):

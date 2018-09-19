@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-################################################################################
+###############################################################################
 # Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
@@ -15,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Tests for linear least-squares fitter.
 
@@ -45,7 +42,7 @@ class TestLinearLeastSquaresFit(TestCase):
         self.poly_y = np.dot(self.params, self.poly_x)
 
     def test_fit_eval(self):
-        """LinearLeastSquaresFit: Basic function fitting and evaluation using data from a known function."""
+        """LinearLeastSquaresFit: Basic function fitting and evaluation."""
         interp = LinearLeastSquaresFit()
         self.assertRaises(NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -54,7 +51,7 @@ class TestLinearLeastSquaresFit(TestCase):
         assert_almost_equal(y, self.y, decimal=10)
 
     def test_cov_params(self):
-        """LinearLeastSquaresFit: Obtain sample statistics of parameters and compare to calculated covariance matrix."""
+        """LinearLeastSquaresFit: Compare param stats to covariance matrix."""
         interp = LinearLeastSquaresFit()
         std_y = 1.0
         M = 200
@@ -67,10 +64,13 @@ class TestLinearLeastSquaresFit(TestCase):
         norm_params = param_set - mean_params[:, np.newaxis]
         cov_params = np.dot(norm_params, norm_params.T) / M
         std_params = np.sqrt(np.diag(interp.cov_params))
-        self.assertTrue((np.abs(mean_params - self.params) / std_params < 0.25).all(),
-                        "Sample mean parameter vector differs too much from true value")
-        self.assertTrue((np.abs(cov_params - interp.cov_params) / np.abs(interp.cov_params) < 1.0).all(),
-                        "Sample parameter covariance matrix differs too much from expected one")
+        self.assertTrue(
+            (np.abs(mean_params - self.params) / std_params < 0.25).all(),
+            "Sample mean parameter vector differs too much from true value")
+        self.assertTrue(
+            (np.abs(cov_params - interp.cov_params) /
+             np.abs(interp.cov_params) < 1.0).all(),
+            "Sample parameter covariance matrix differs too much")
 
     def test_vs_numpy(self):
         """LinearLeastSquaresFit: Compare fitter to np.linalg.lstsq."""
@@ -83,6 +83,7 @@ class TestLinearLeastSquaresFit(TestCase):
         interp.fit(self.poly_x, self.poly_y)
         params = np.linalg.lstsq(self.poly_x.T, self.poly_y, rcond)[0]
         assert_almost_equal(interp.params, params, decimal=10)
+
 
 if __name__ == "__main__":
     run_module_suite()
