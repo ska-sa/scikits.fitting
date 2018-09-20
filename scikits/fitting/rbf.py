@@ -32,7 +32,7 @@ from .generic import ScatterFit, NotFittedError
 
 
 class RbfScatterFit(ScatterFit):
-    """Do radial basis function (RBF) interpolation of scattered multi-dim data.
+    """Do radial basis function (RBF) interpolation of scattered multi-dimensional data.
 
     This uses the :class:`scipy.interpolate.Rbf` class. The D-dimensional ``x``
     coordinates do not have to lie on a regular grid, and can be in any order.

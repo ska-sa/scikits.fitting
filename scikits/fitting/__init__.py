@@ -70,7 +70,7 @@ Grid fitters
 Helper functions
 ----------------
 
-- :func:`squash` : Flatten array, but not necessarily all the way to 1-D array
+- :func:`squash` : Flatten array, but not necessarily all the way to a 1-D array
 - :func:`unsquash' : Restore an array that was reshaped by :func:`squash`
 - :func:`sort_grid` : Ensure that the coordinates of a rectangular grid are in
                       ascending order

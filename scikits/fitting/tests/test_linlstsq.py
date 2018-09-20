@@ -79,7 +79,7 @@ class TestLinearLeastSquaresFit(TestCase):
         """LinearLeastSquaresFit: Compare fitter to np.linalg.lstsq."""
         interp = LinearLeastSquaresFit()
         interp.fit(self.x, self.y)
-        params = np.linalg.lstsq(self.x.T, self.y, rcond=None)[0]
+        params = np.linalg.lstsq(self.x.T, self.y, rcond=-1)[0]
         assert_almost_equal(interp.params, params, decimal=10)
         rcond = 1e-3
         interp = LinearLeastSquaresFit(rcond)
