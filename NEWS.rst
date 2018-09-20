@@ -1,6 +1,12 @@
 History
 =======
 
+0.7 (2018-09-20)
+----------------
+
+* Python 3 support
+* Clean up tests and more flake8 (line lengths)
+
 0.6 (2016-12-05)
 ----------------
 
