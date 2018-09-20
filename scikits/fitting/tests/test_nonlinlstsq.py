@@ -88,7 +88,7 @@ class TestNonLinearLeastSquaresFit(TestCase):
         assert_almost_equal(nonlin.cov_params, lin.cov_params, decimal=11)
         nonlin_nojac = NonLinearLeastSquaresFit(self.func3, self.init_params3)
         nonlin_nojac.fit(self.x3, self.y3, std_y=0.1)
-        assert_almost_equal(nonlin_nojac.params, self.true_params3, decimal=6)
+        assert_almost_equal(nonlin_nojac.params, self.true_params3, decimal=5)
         # Covariance matrix is way smaller than linear one...
 
     def test_enabled_params(self):
