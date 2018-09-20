@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-################################################################################
-# Copyright (c) 2007-2016, National Research Foundation (Square Kilometre Array)
+###############################################################################
+# Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
 # this file except in compliance with the License. You may obtain a copy
@@ -15,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Tests for utility functions.
 
@@ -26,7 +23,8 @@
 
 from builtins import range
 import numpy as np
-from numpy.testing import TestCase, assert_array_equal, assert_almost_equal, run_module_suite
+from numpy.testing import (TestCase, assert_array_equal, assert_almost_equal,
+                           run_module_suite)
 
 from scikits.fitting import squash, unsquash, randomise, Polynomial1DFit
 
@@ -67,7 +65,8 @@ class TestRandomise(TestCase):
         self.x = np.arange(-3.0, 4.0, 1.0)
         self.y = np.polyval(self.poly, self.x)
         self.num_runs = 100
-        self.y_noisy = self.y + 0.001 * np.random.randn(self.num_runs, len(self.y))
+        self.y_noisy = self.y + 0.001 * np.random.randn(self.num_runs,
+                                                        len(self.y))
 
     def test_randomised_polyfit(self):
         """Randomise: Randomise the fit of a polynomial fitter."""
@@ -90,18 +89,26 @@ class TestRandomise(TestCase):
         noisy_poly = np.array(noisy_poly)
         # Randomise polynomial fit to first noisy sample in various ways
         # pylint: disable-msg=W0612
-        shuffle_poly = np.array([randomise(interp, self.x, self.y_noisy[0], 'shuffle').poly
+        shuffle_poly = np.array([randomise(interp, self.x, self.y_noisy[0],
+                                           'shuffle').poly
                                  for n in range(self.num_runs)])
-        assert_almost_equal(shuffle_poly.mean(axis=0), noisy_poly[0], decimal=2)
-        assert_almost_equal(shuffle_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
-        normal_poly = np.array([randomise(interp, self.x, self.y_noisy[0], 'normal').poly
+        assert_almost_equal(shuffle_poly.mean(axis=0), noisy_poly[0],
+                            decimal=2)
+        assert_almost_equal(shuffle_poly.std(axis=0), noisy_poly.std(axis=0),
+                            decimal=2)
+        normal_poly = np.array([randomise(interp, self.x, self.y_noisy[0],
+                                          'normal').poly
                                 for n in range(self.num_runs)])
         assert_almost_equal(normal_poly.mean(axis=0), noisy_poly[0], decimal=2)
-        assert_almost_equal(normal_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
-        boot_poly = np.array([randomise(interp, self.x, self.y_noisy[0], 'bootstrap').poly
+        assert_almost_equal(normal_poly.std(axis=0), noisy_poly.std(axis=0),
+                            decimal=2)
+        boot_poly = np.array([randomise(interp, self.x, self.y_noisy[0],
+                                        'bootstrap').poly
                               for n in range(self.num_runs)])
         assert_almost_equal(boot_poly.mean(axis=0), noisy_poly[0], decimal=2)
-        assert_almost_equal(boot_poly.std(axis=0), noisy_poly.std(axis=0), decimal=2)
+        assert_almost_equal(boot_poly.std(axis=0), noisy_poly.std(axis=0),
+                            decimal=2)
+
 
 if __name__ == "__main__":
     run_module_suite()

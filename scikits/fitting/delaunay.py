@@ -1,5 +1,5 @@
-################################################################################
-# Copyright (c) 2007-2016, National Research Foundation (Square Kilometre Array)
+###############################################################################
+# Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
 # this file except in compliance with the License. You may obtain a copy
@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Delaunay fitters.
 
@@ -25,8 +25,8 @@ unpacked to split the fitting and evaluation stages.
 """
 import numpy as np
 # Interpolators based on triangulation available since scipy 0.9.0
-from scipy.interpolate import (CloughTocher2DInterpolator, LinearNDInterpolator,
-                               NearestNDInterpolator)
+from scipy.interpolate import (CloughTocher2DInterpolator,
+                               LinearNDInterpolator, NearestNDInterpolator)
 
 from .generic import ScatterFit, NotFittedError
 
@@ -39,9 +39,9 @@ class Delaunay2DScatterFit(ScatterFit):
     """Interpolate scalar function of 2-D data, based on Delaunay triangulation.
 
     The *x* data for this object should have two rows, containing the 'x' and
-    'y' coordinates of points in a plane. The 2-D points are therefore stored as
-    column vectors in *x*. The *y* data for this object is a 1-D array, which
-    represents the scalar 'z' value of the function defined on the plane
+    'y' coordinates of points in a plane. The 2-D points are therefore stored
+    as column vectors in *x*. The *y* data for this object is a 1-D array,
+    which represents the scalar 'z' value of the function defined on the plane
     (the symbols in quotation marks are the typical mathematical names for
     these variables). The 2-D *x* coordinates do not have to lie on a regular
     grid, and can be in any order.
@@ -102,9 +102,11 @@ class Delaunay2DScatterFit(ScatterFit):
             x = x + 0.00001 * x.std(axis=1)[:, np.newaxis] * \
                 np.random.standard_normal(x.shape)
         if self.interp_type == 'cubic':
-            self._interp = CloughTocher2DInterpolator(x.T, y, fill_value=self.default_val)
+            self._interp = CloughTocher2DInterpolator(
+                x.T, y, fill_value=self.default_val)
         elif self.interp_type == 'linear':
-            self._interp = LinearNDInterpolator(x.T, y, fill_value=self.default_val)
+            self._interp = LinearNDInterpolator(
+                x.T, y, fill_value=self.default_val)
         else:
             self._interp = NearestNDInterpolator(x.T, y)
         return self

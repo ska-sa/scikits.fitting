@@ -13,3 +13,4 @@ build
 dist
 *.swp
 .coverage
+__pycache__

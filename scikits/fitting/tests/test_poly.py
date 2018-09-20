@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-################################################################################
-# Copyright (c) 2007-2016, National Research Foundation (Square Kilometre Array)
+###############################################################################
+# Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
 # this file except in compliance with the License. You may obtain a copy
@@ -15,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Tests for polynomial fitters.
 
@@ -27,9 +24,11 @@ from __future__ import division
 
 from builtins import range
 import numpy as np
-from numpy.testing import TestCase, assert_equal, assert_almost_equal, run_module_suite
+from numpy.testing import (TestCase, assert_equal, assert_almost_equal,
+                           run_module_suite)
 
-from scikits.fitting import Polynomial1DFit, Polynomial2DFit, PiecewisePolynomial1DFit, NotFittedError
+from scikits.fitting import (Polynomial1DFit, Polynomial2DFit,
+                             PiecewisePolynomial1DFit, NotFittedError)
 from scikits.fitting.poly import _stepwise_interp, _linear_interp
 
 
@@ -48,7 +47,7 @@ class TestPolynomial1DFit(TestCase):
         self.randp = np.random.randn(4)
 
     def test_fit_eval(self):
-        """Polynomial1DFit: Basic function fitting and evaluation on known zero-mean data."""
+        """Polynomial1DFit: Basic function fitting + evaluation (zero-mean)."""
         interp = Polynomial1DFit(2)
         self.assertRaises(NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -58,7 +57,7 @@ class TestPolynomial1DFit(TestCase):
         assert_almost_equal(y, self.y, decimal=10)
 
     def test_fit_eval2(self):
-        """Polynomial1DFit: Basic function fitting and evaluation on known non-zero-mean data."""
+        """Polynomial1DFit: Basic fitting and evaluation (non-zero-mean)."""
         interp = Polynomial1DFit(2)
         interp.fit(self.x2, self.y2)
         y2 = interp(self.x2)
@@ -66,7 +65,7 @@ class TestPolynomial1DFit(TestCase):
         assert_almost_equal(y2, self.y2, decimal=10)
 
     def test_cov_params(self):
-        """Polynomial1DFit: Obtain sample statistics of parameters and compare to calculated covariance matrix."""
+        """Polynomial1DFit: Compare parameter stats to covariance matrix."""
         interp = Polynomial1DFit(2)
         std_y = 1.3
         M = 200
@@ -79,10 +78,13 @@ class TestPolynomial1DFit(TestCase):
         norm_poly = poly_set - mean_poly[:, np.newaxis]
         cov_poly = np.dot(norm_poly, norm_poly.T) / M
         std_poly = np.sqrt(np.diag(interp.cov_poly))
-        self.assertTrue((np.abs(mean_poly - self.poly) / std_poly < 0.5).all(),
-                        "Sample mean coefficient vector differs too much from true value")
-        self.assertTrue((np.abs(cov_poly - interp.cov_poly) / np.abs(interp.cov_poly) < 0.5).all(),
-                        "Sample coefficient covariance matrix differs too much from expected one")
+        self.assertTrue(
+            (np.abs(mean_poly - self.poly) / std_poly < 0.5).all(),
+            "Sample mean coefficient vector differs too much from true value")
+        self.assertTrue(
+            (np.abs(cov_poly - interp.cov_poly) /
+             np.abs(interp.cov_poly) < 0.5).all(),
+            "Sample coefficient covariance matrix differs too much")
 
     def test_vs_numpy(self):
         """Polynomial1DFit: Compare fitter to np.polyfit and np.polyval."""
@@ -99,7 +101,7 @@ class TestPolynomial1DFit(TestCase):
 
     # pylint: disable-msg=R0201
     def test_reduce_degree(self):
-        """Polynomial1DFit: Check that polynomial degree is reduced with too few data points."""
+        """Polynomial1DFit: Reduce polynomial degree if too few data points."""
         interp = Polynomial1DFit(2)
         interp.fit([1.0], [1.0])
         assert_almost_equal(interp.poly, [1.0], decimal=10)
@@ -116,18 +118,28 @@ class TestPolynomial2DFit(TestCase):
         x2 = np.arange(-1., 1.2, 0.2)
         xx1, xx2 = np.meshgrid(x1, x2)
         self.x = X = np.vstack((xx1.ravel(), xx2.ravel()))
-        A = np.c_[X[0] * X[1]**2, X[0] * X[1], X[0], X[1]**2, X[1], np.ones(X.shape[1])].T
+        A = np.c_[X[0] * X[1]**2,
+                  X[0] * X[1],
+                  X[0],
+                  X[1]**2,
+                  X[1],
+                  np.ones(X.shape[1])].T
         self.y = np.dot(self.poly, A)
         # Non-zero mean (and uneven scale) case
         x1 = np.arange(0., 10.)
         x2 = np.arange(0., 5.)
         xx1, xx2 = np.meshgrid(x1, x2)
         self.x2 = X = np.vstack((xx1.ravel(), xx2.ravel()))
-        A = np.c_[X[0] * X[1]**2, X[0] * X[1], X[0], X[1]**2, X[1], np.ones(X.shape[1])].T
+        A = np.c_[X[0] * X[1]**2,
+                  X[0] * X[1],
+                  X[0],
+                  X[1]**2,
+                  X[1],
+                  np.ones(X.shape[1])].T
         self.y2 = np.dot(self.poly, A)
 
     def test_fit_eval(self):
-        """Polynomial2DFit: Basic function fitting and evaluation on known zero-mean data."""
+        """Polynomial2DFit: Basic function fitting + evaluation (zero-mean)."""
         interp = Polynomial2DFit(self.degrees)
         self.assertRaises(NotFittedError, interp, self.x)
         interp.fit(self.x, self.y)
@@ -138,7 +150,7 @@ class TestPolynomial2DFit(TestCase):
         assert_almost_equal(y, self.y, decimal=10)
 
     def test_fit_eval2(self):
-        """Polynomial2DFit: Basic function fitting and evaluation on known non-zero-mean data."""
+        """Polynomial2DFit: Basic fitting and evaluation (non-zero-mean)."""
         interp = Polynomial2DFit(self.degrees)
         interp.fit(self.x2, self.y2)
         y2 = interp(self.x2)
@@ -146,7 +158,7 @@ class TestPolynomial2DFit(TestCase):
         assert_almost_equal(y2, self.y2, decimal=10)
 
     def test_cov_params(self):
-        """Polynomial2DFit: Obtain sample statistics of parameters and compare to calculated covariance matrix."""
+        """Polynomial2DFit: Compare parameter stats to covariance matrix."""
         interp = Polynomial2DFit(self.degrees)
         std_y = 1.7
         M = 200
@@ -159,14 +171,17 @@ class TestPolynomial2DFit(TestCase):
         norm_poly = poly_set - mean_poly[:, np.newaxis]
         cov_poly = np.dot(norm_poly, norm_poly.T) / M
         std_poly = np.sqrt(np.diag(interp.cov_poly))
-        self.assertTrue((np.abs(mean_poly - self.poly) / std_poly < 0.5).all(),
-                        "Sample mean coefficient vector differs too much from true value")
-        self.assertTrue((np.abs(cov_poly - interp.cov_poly) / np.abs(interp.cov_poly) < 1.0).all(),
-                        "Sample coefficient covariance matrix differs too much from expected one")
+        self.assertTrue(
+            (np.abs(mean_poly - self.poly) / std_poly < 0.5).all(),
+            "Sample mean coefficient vector differs too much from true value")
+        self.assertTrue(
+            (np.abs(cov_poly - interp.cov_poly) /
+             np.abs(interp.cov_poly) < 1.0).all(),
+            "Sample coefficient covariance matrix differs too much")
 
 
 class TestPiecewisePolynomial1DFit(TestCase):
-    """Fit a 1-D piecewise polynomial to data from a known polynomial, and compare."""
+    """Fit a 1-D piecewise polynomial to data from a known polynomial."""
 
     def setUp(self):
         self.poly = np.array([1.0, 2.0, 3.0, 4.0])
@@ -174,7 +189,7 @@ class TestPiecewisePolynomial1DFit(TestCase):
         self.y = np.polyval(self.poly, self.x)
 
     def test_fit_eval(self):
-        """PiecewisePolynomial1DFit: Basic function fitting and evaluation using data from a known function."""
+        """PiecewisePolynomial1DFit: Basic function fitting and evaluation."""
         interp = PiecewisePolynomial1DFit(max_degree=3)
         self.assertRaises(NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, [0, 0], [1, 2])
@@ -187,7 +202,7 @@ class TestPiecewisePolynomial1DFit(TestCase):
         assert_equal(y, np.tile(self.y[0], self.x.shape))
 
     def test_stepwise_interp(self):
-        """PiecewisePolynomial1DFit: Test underlying zeroth-order interpolator."""
+        """PiecewisePolynomial1DFit: Test underlying 0th-order interpolator."""
         x = np.sort(np.random.rand(100)) * 4. - 2.5
         y = np.random.randn(100)
         interp = PiecewisePolynomial1DFit(max_degree=0)
@@ -196,17 +211,20 @@ class TestPiecewisePolynomial1DFit(TestCase):
         assert_almost_equal(interp(x + 1e-15), y, decimal=10)
         assert_almost_equal(interp(x - 1e-15), y, decimal=10)
         assert_almost_equal(_stepwise_interp(x, y, x), y, decimal=10)
-        assert_almost_equal(interp(self.x), _stepwise_interp(x, y, self.x), decimal=10)
+        assert_almost_equal(interp(self.x), _stepwise_interp(x, y, self.x),
+                            decimal=10)
 
     def test_linear_interp(self):
-        """PiecewisePolynomial1DFit: Test underlying first-order interpolator."""
+        """PiecewisePolynomial1DFit: Test underlying 1st-order interpolator."""
         x = np.sort(np.random.rand(100)) * 4. - 2.5
         y = np.random.randn(100)
         interp = PiecewisePolynomial1DFit(max_degree=1)
         interp.fit(x, y)
         assert_almost_equal(interp(x), y, decimal=10)
         assert_almost_equal(_linear_interp(x, y, x), y, decimal=10)
-        assert_almost_equal(interp(self.x), _linear_interp(x, y, self.x), decimal=10)
+        assert_almost_equal(interp(self.x), _linear_interp(x, y, self.x),
+                            decimal=10)
+
 
 if __name__ == "__main__":
     run_module_suite()

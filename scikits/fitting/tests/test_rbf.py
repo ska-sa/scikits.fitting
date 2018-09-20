@@ -1,8 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-################################################################################
-# Copyright (c) 2007-2016, National Research Foundation (Square Kilometre Array)
+###############################################################################
+# Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
 # this file except in compliance with the License. You may obtain a copy
@@ -15,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-################################################################################
+###############################################################################
 
 """Tests for RBF fitter.
 
@@ -41,7 +38,7 @@ class TestRbfScatterFit(TestCase):
         self.testy = np.array([1, 1, 1, 1])
 
     def test_fit_eval(self):
-        """RbfScatterFit: Basic function fitting and evaluation using data from a known function."""
+        """RbfScatterFit: Basic function fitting and evaluation."""
         interp = RbfScatterFit()
         self.assertRaises(NotFittedError, interp, self.x)
         self.assertRaises(ValueError, interp.fit, self.y, self.y[:-1])
@@ -50,6 +47,7 @@ class TestRbfScatterFit(TestCase):
         testy = interp(self.testx)
         assert_almost_equal(y, self.y, decimal=10)
         assert_almost_equal(testy, self.testy, decimal=2)
+
 
 if __name__ == "__main__":
     run_module_suite()
