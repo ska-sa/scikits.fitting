@@ -22,9 +22,12 @@
 """
 from __future__ import division
 
+import warnings
+
 from builtins import range
 import numpy as np
-from numpy.testing import TestCase, assert_almost_equal, run_module_suite
+from numpy.testing import (TestCase, assert_equal, assert_almost_equal,
+                           run_module_suite)
 
 from scikits.fitting import LinearLeastSquaresFit, NotFittedError
 
@@ -80,7 +83,10 @@ class TestLinearLeastSquaresFit(TestCase):
         assert_almost_equal(interp.params, params, decimal=10)
         rcond = 1e-3
         interp = LinearLeastSquaresFit(rcond)
-        interp.fit(self.poly_x, self.poly_y)
+        with warnings.catch_warnings(record=True) as warning:
+            interp.fit(self.poly_x, self.poly_y)
+            assert_equal(str(warning[0].message),
+                         "Least-squares fit may be poorly conditioned")
         params = np.linalg.lstsq(self.poly_x.T, self.poly_y, rcond)[0]
         assert_almost_equal(interp.params, params, decimal=10)
 
