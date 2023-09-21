@@ -24,7 +24,7 @@ from __future__ import division
 
 from builtins import range
 import numpy as np
-from numpy.testing import TestCase, assert_almost_equal, run_module_suite
+from numpy.testing import TestCase, assert_almost_equal
 
 from scikits.fitting import (Spline1DFit, Spline2DScatterFit, Spline2DGridFit,
                              NotFittedError)
@@ -141,7 +141,3 @@ class TestSpline2DGridFit(TestCase):
         rel_std_diff_p90 = sorted(rel_std_diff.ravel())[
             int(0.90 * rel_std_diff.size)]
         self.assertTrue(rel_std_diff_p90 < 0.1)
-
-
-if __name__ == "__main__":
-    run_module_suite()

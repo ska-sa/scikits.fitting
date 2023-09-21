@@ -24,8 +24,7 @@ from __future__ import division
 
 from builtins import range
 import numpy as np
-from numpy.testing import (TestCase, assert_equal, assert_almost_equal,
-                           run_module_suite)
+from numpy.testing import TestCase, assert_equal, assert_almost_equal
 
 from scikits.fitting import (Polynomial1DFit, Polynomial2DFit,
                              PiecewisePolynomial1DFit, NotFittedError)
@@ -224,7 +223,3 @@ class TestPiecewisePolynomial1DFit(TestCase):
         assert_almost_equal(_linear_interp(x, y, x), y, decimal=10)
         assert_almost_equal(interp(self.x), _linear_interp(x, y, self.x),
                             decimal=10)
-
-
-if __name__ == "__main__":
-    run_module_suite()
