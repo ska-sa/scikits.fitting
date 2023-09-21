@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 ###############################################################################
-# Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
+# Copyright (c) 2007-2018, National Research Foundation (SARAO)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
 # this file except in compliance with the License. You may obtain a copy
@@ -61,8 +61,8 @@ setup(name='scikits.fitting',
       maintainer_email='ludwig@ska.ac.za',
       url='https://github.com/ska-sa/scikits.fitting',
       license='Modified BSD',
-      version='0.7',
-      classifiers=['Development Status :: 4 - Beta',
+      version='0.7.1',
+      classifiers=['Development Status :: 5 - Production/Stable',
                    'Environment :: Console',
                    'Intended Audience :: Developers',
                    'Intended Audience :: Science/Research',
@@ -76,7 +76,7 @@ setup(name='scikits.fitting',
                    'Topic :: Scientific/Engineering'],
       configuration=configuration,
       platforms=['OS Independent'],
-      python_requires='>=2.7,!=3.0,!=3.1,!=3.2',
+      python_requires='>=2.7, !=3.0, !=3.1, !=3.2, <4',
       install_requires=['numpy', 'scipy>=0.9', 'future'],
       namespace_packages=['scikits'],
       packages=find_packages(),

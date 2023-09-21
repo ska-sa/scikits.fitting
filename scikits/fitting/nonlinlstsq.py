@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2007-2018, National Research Foundation (Square Kilometre Array)
+# Copyright (c) 2007-2018, National Research Foundation (SARAO)
 #
 # Licensed under the BSD 3-Clause License (the "License"); you may not use
 # this file except in compliance with the License. You may obtain a copy
@@ -100,7 +100,7 @@ class NonLinearLeastSquaresFit(ScatterFit):
         self.func = func
         # Preserve this for repeatability of fits
         # (also ensure it is floating-point to please residuals() function)
-        self.initial_params = np.asarray(initial_params).astype(np.float)
+        self.initial_params = np.asarray(initial_params).astype(float)
         self.func_jacobian = func_jacobian
         # Extra keyword arguments to optimiser
         self._extra_args = kwargs
