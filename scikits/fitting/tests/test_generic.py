@@ -22,7 +22,7 @@
 """
 
 import numpy as np
-from numpy.testing import TestCase, assert_almost_equal, run_module_suite
+from numpy.testing import TestCase, assert_almost_equal
 
 from scikits.fitting import Independent1DFit, Polynomial1DFit, NotFittedError
 
@@ -62,7 +62,3 @@ class TestIndependent1DFit(TestCase):
         assert_almost_equal(interp._interps[1, 1].poly, self.poly1, decimal=10)
         assert_almost_equal(interp._interps[1, 2].poly, self.poly2, decimal=10)
         assert_almost_equal(y, self.y, decimal=10)
-
-
-if __name__ == "__main__":
-    run_module_suite()

@@ -22,7 +22,7 @@
 """
 
 import numpy as np
-from numpy.testing import TestCase, assert_almost_equal, run_module_suite
+from numpy.testing import TestCase, assert_almost_equal
 
 from scikits.fitting import Delaunay2DScatterFit, NotFittedError
 
@@ -80,7 +80,3 @@ class TestDelaunay2DScatterFit(TestCase):
         assert_almost_equal(testy, self.testy, decimal=10)
         # Nearest-neighbour interpolation has no outside value
         # assert_almost_equal(outsidey, self.outsidey, decimal=10)
-
-
-if __name__ == "__main__":
-    run_module_suite()

@@ -24,7 +24,7 @@ from __future__ import division
 
 from builtins import range
 import numpy as np
-from numpy.testing import TestCase, assert_almost_equal, run_module_suite
+from numpy.testing import TestCase, assert_almost_equal
 
 from scikits.fitting import GaussianFit
 
@@ -131,7 +131,3 @@ class TestGaussianFitDegenerate(TestCase):
         assert_almost_equal(interp.std, self.true_std, decimal=7)
         assert_almost_equal(interp.height, self.true_height, decimal=7)
         assert_almost_equal(y, self.y, decimal=7)
-
-
-if __name__ == "__main__":
-    run_module_suite()

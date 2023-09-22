@@ -23,8 +23,7 @@
 
 from builtins import range
 import numpy as np
-from numpy.testing import (TestCase, assert_array_equal, assert_almost_equal,
-                           run_module_suite)
+from numpy.testing import TestCase, assert_array_equal, assert_almost_equal
 
 from scikits.fitting import squash, unsquash, randomise, Polynomial1DFit
 
@@ -108,7 +107,3 @@ class TestRandomise(TestCase):
         assert_almost_equal(boot_poly.mean(axis=0), noisy_poly[0], decimal=2)
         assert_almost_equal(boot_poly.std(axis=0), noisy_poly.std(axis=0),
                             decimal=2)
-
-
-if __name__ == "__main__":
-    run_module_suite()

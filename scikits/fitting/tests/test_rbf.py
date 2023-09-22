@@ -22,7 +22,7 @@
 """
 
 import numpy as np
-from numpy.testing import TestCase, assert_almost_equal, run_module_suite
+from numpy.testing import TestCase, assert_almost_equal
 
 from scikits.fitting import RbfScatterFit, NotFittedError
 
@@ -47,7 +47,3 @@ class TestRbfScatterFit(TestCase):
         testy = interp(self.testx)
         assert_almost_equal(y, self.y, decimal=10)
         assert_almost_equal(testy, self.testy, decimal=2)
-
-
-if __name__ == "__main__":
-    run_module_suite()

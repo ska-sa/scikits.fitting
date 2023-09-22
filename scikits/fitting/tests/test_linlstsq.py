@@ -26,8 +26,7 @@ import warnings
 
 from builtins import range
 import numpy as np
-from numpy.testing import (TestCase, assert_equal, assert_almost_equal,
-                           run_module_suite)
+from numpy.testing import TestCase, assert_equal, assert_almost_equal
 
 from scikits.fitting import LinearLeastSquaresFit, NotFittedError
 
@@ -89,7 +88,3 @@ class TestLinearLeastSquaresFit(TestCase):
                          "Least-squares fit may be poorly conditioned")
         params = np.linalg.lstsq(self.poly_x.T, self.poly_y, rcond)[0]
         assert_almost_equal(interp.params, params, decimal=10)
-
-
-if __name__ == "__main__":
-    run_module_suite()

@@ -23,7 +23,7 @@
 from __future__ import division
 
 import numpy as np
-from numpy.testing import TestCase, assert_almost_equal, run_module_suite
+from numpy.testing import TestCase, assert_almost_equal
 
 from scikits.fitting import (NonLinearLeastSquaresFit, LinearLeastSquaresFit,
                              vectorize_fit_func)
@@ -109,7 +109,3 @@ class TestNonLinearLeastSquaresFit(TestCase):
         nonlin.fit(self.x3, self.y3, std_y=2.0)
         assert_almost_equal(nonlin.params, self.true_params3, decimal=11)
         assert_almost_equal(nonlin.cov_params, lin_cov_params, decimal=11)
-
-
-if __name__ == "__main__":
-    run_module_suite()
