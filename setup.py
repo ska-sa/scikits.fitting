@@ -49,7 +49,6 @@ setup(name='scikits.fitting',
       platforms=['OS Independent'],
       python_requires='>=2.7, !=3.0, !=3.1, !=3.2, <4',
       install_requires=['numpy', 'scipy>=0.9', 'future'],
-      namespace_packages=['scikits'],
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False)
