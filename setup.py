@@ -18,35 +18,7 @@
 
 import os
 
-from setuptools import dist, find_packages
-
-# Ensure we have numpy before we start as it is needed before we call setup()
-# If not installed system-wide it will be downloaded into the local .eggs dir
-dist.Distribution(dict(setup_requires='numpy'))
-
-from numpy.distutils.core import setup  # noqa: E402 (needs pre-setup above)
-from numpy.distutils.misc_util import Configuration  # noqa: E402
-
-
-def configuration(parent_package='', top_path=None):
-    """Configuration to deal with scikits namespace."""
-    if os.path.exists('MANIFEST'):
-        os.remove('MANIFEST')
-
-    config = Configuration(None, parent_package, top_path,
-                           namespace_packages=['scikits'])
-
-    config.set_options(ignore_setup_xxx_py=True,
-                       assume_default_configuration=True,
-                       delegate_options_to_subpackages=True,
-                       quiet=True)
-
-    config.add_subpackage('scikits')
-    config.add_subpackage('scikits.fitting')
-    config.add_data_files('scikits/__init__.py')
-    config.add_data_dir('scikits/fitting/tests')
-
-    return config
+from setuptools import setup, find_packages
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -61,7 +33,7 @@ setup(name='scikits.fitting',
       maintainer_email='ludwig@ska.ac.za',
       url='https://github.com/ska-sa/scikits.fitting',
       license='Modified BSD',
-      version='0.7.1',
+      version='0.7.2',
       classifiers=['Development Status :: 5 - Production/Stable',
                    'Environment :: Console',
                    'Intended Audience :: Developers',
@@ -74,11 +46,9 @@ setup(name='scikits.fitting',
                    'Programming Language :: Python :: 3',
                    'Topic :: Software Development :: Libraries :: Python Modules',
                    'Topic :: Scientific/Engineering'],
-      configuration=configuration,
       platforms=['OS Independent'],
       python_requires='>=2.7, !=3.0, !=3.1, !=3.2, <4',
       install_requires=['numpy', 'scipy>=0.9', 'future'],
-      namespace_packages=['scikits'],
       packages=find_packages(),
       include_package_data=True,
       zip_safe=False)
